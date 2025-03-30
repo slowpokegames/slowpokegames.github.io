@@ -1,0 +1,713 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Real-time Grid Game (Single File)</title>
+    <style>
+        /* CSS from previous style.css */
+        body {
+            font-family: sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin: 0;
+            padding: 10px;
+            background-color: #f0f0f0;
+        }
+
+        h1, h2, h3 {
+            margin-top: 0;
+            text-align: center;
+        }
+
+        .status {
+            margin-bottom: 10px;
+            padding: 10px;
+            background-color: #fff;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            min-width: 300px;
+            text-align: center;
+        }
+
+        .game-container {
+            display: flex;
+            flex-wrap: wrap; /* Allow controls to wrap on smaller screens */
+            gap: 20px;
+            margin-top: 10px;
+            justify-content: center;
+        }
+
+        #grid-container {
+            display: grid;
+            /* Defined by JS */
+            grid-template-columns: repeat(10, 45px); /* Slightly smaller */
+            grid-template-rows: repeat(10, 45px);
+            border: 2px solid black;
+            width: 450px; /* 10 * 45px */
+            height: 450px; /* 10 * 45px */
+            position: relative; /* For positioning pieces */
+            background-color: white; /* Background for the grid */
+             touch-action: none; /* Prevent scrolling on touch devices when dragging */
+        }
+
+        .grid-cell {
+            border: 1px solid #ccc;
+            box-sizing: border-box;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: #f9f9f9;
+            user-select: none;
+        }
+
+        .grid-cell.selected {
+            background-color: #a0e0a0;
+            outline: 2px solid darkgreen;
+            z-index: 1;
+        }
+
+        .piece {
+            width: 75%;
+            height: 75%;
+            border-radius: 50%;
+            border: 1px solid black;
+            position: absolute;
+            cursor: grab;
+            box-sizing: border-box;
+            transition: transform 0.1s ease-out, background-color 0.3s ease;
+            z-index: 10;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 10px;
+            font-weight: bold;
+            color: white;
+            text-shadow: 1px 1px 1px black;
+        }
+        .piece:active {
+             cursor: grabbing;
+             z-index: 11;
+             transform: scale(1.1);
+        }
+
+        .controls {
+            border: 1px solid #ddd;
+            padding: 15px;
+            min-width: 250px;
+            background-color: #fff;
+            border-radius: 5px;
+            height: fit-content; /* Prevent controls stretching too tall */
+        }
+
+        button, select {
+            margin: 8px 0;
+            padding: 8px 12px;
+            cursor: pointer;
+            width: 100%; /* Make controls fill width */
+            box-sizing: border-box;
+        }
+
+        #player-list li {
+            margin-bottom: 5px;
+            display: flex;
+            align-items: center;
+            list-style: none; /* Remove bullet points */
+            padding-left: 0;
+        }
+        #player-list {
+            padding-left: 0;
+            max-height: 100px; /* Limit list height */
+            overflow-y: auto;
+        }
+
+
+        .color-box {
+            display: inline-block;
+            width: 15px;
+            height: 15px;
+            border: 1px solid #555;
+            margin-right: 5px; /* Swapped margin side */
+            vertical-align: middle;
+            flex-shrink: 0; /* Prevent shrinking */
+        }
+        hr {
+            border: none;
+            border-top: 1px solid #eee;
+            margin: 15px 0;
+        }
+
+        /* Tooltip for piece ID */
+        .piece[data-tooltip]:hover::after {
+            content: attr(data-tooltip);
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            bottom: 105%;
+            padding: 5px;
+            background-color: rgba(0, 0, 0, 0.7);
+            color: white;
+            border-radius: 3px;
+            font-size: 12px;
+            white-space: nowrap;
+            z-index: 20;
+        }
+
+    </style>
+</head>
+<body>
+
+    <h1>Real-time Grid Game (Single File Demo)</h1>
+
+    <div class="status">
+         Status: <span id="status">Initializing...</span> |
+         My ID: <span id="player-id">N/A</span> (<span id="player-color-indicator" class="color-box"></span>) |
+         Room: <strong id="room-name">#default</strong>
+         <br> Players Online: <span id="player-count">0</span>
+    </div>
+
+
+    <div class="game-container">
+        <div id="grid-container">
+            <!-- Grid cells & pieces generated by JS -->
+        </div>
+
+        <div class="controls">
+            <h2>Controls</h2>
+            <button id="add-piece-btn" title="Click a grid cell first, then this button">Add My Piece</button>
+            <hr>
+            <h3>Cards</h3>
+            <button id="draw-card-btn">Draw Number Card (1-100)</button>
+            <p>Last Drawn: <strong id="last-card">N/A</strong></p>
+            <hr>
+            <h3>Dice</h3>
+            <select id="dice-select">
+                <option value="d2">d2</option>
+                <option value="d4">d4</option>
+                <option value="d6" selected>d6</option>
+                <option value="d8">d8</option>
+                <option value="d10">d10</option>
+                <option value="d12">d12</option>
+                <option value="d20">d20</option>
+                <option value="d100">d100</option>
+            </select>
+            <button id="roll-dice-btn">Roll Dice</button>
+            <p>Last Roll: <strong id="last-roll">N/A</strong></p>
+             <hr>
+            <h3>Players Here</h3>
+            <ul id="player-list">
+                <!-- Player list generated by JS -->
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        // --- Configuration ---
+        const PUBLIC_WSS_URL = 'wss://socketsbay.com/wss/v2/1/demo/'; // Public Demo Relay
+        const DEFAULT_ROOM = 'grid-game-default-room'; // Change for a different shared game
+        const GRID_SIZE = 10;
+        const CELL_SIZE_PX = 45; // Match CSS
+
+        // --- DOM Elements ---
+        const statusDisplay = document.getElementById('status');
+        const gridContainer = document.getElementById('grid-container');
+        const playerIdDisplay = document.getElementById('player-id');
+        const playerColorIndicator = document.getElementById('player-color-indicator');
+        const addPieceBtn = document.getElementById('add-piece-btn');
+        const drawCardBtn = document.getElementById('draw-card-btn');
+        const lastCardDisplay = document.getElementById('last-card');
+        const diceSelect = document.getElementById('dice-select');
+        const rollDiceBtn = document.getElementById('roll-dice-btn');
+        const lastRollDisplay = document.getElementById('last-roll');
+        const playerCountDisplay = document.getElementById('player-count');
+        const playerListUl = document.getElementById('player-list');
+        const roomNameDisplay = document.getElementById('room-name');
+
+        // --- Game State (Client-Side) ---
+        // NOTE: In this model, state is synchronized via broadcasted actions.
+        // It relies on all clients processing actions in roughly the same order.
+        // This is less robust than a server-authoritative model.
+        let gameState = {
+            pieces: {}, // { 'pieceId': { id, ownerId, x, y, color } }
+            players: {}, // { 'playerId': { id, color } }
+            lastDrawnCard: null,
+            lastDiceRoll: { type: '', result: null },
+        };
+
+        let myClientId = null;
+        let myClientColor = null;
+        let selectedCell = null; // { x, y }
+        let draggedPieceInfo = null; // { element, id, startX, startY }
+        let ws = null;
+        let syncTimeout = null; // For requesting state sync
+        let roomName = DEFAULT_ROOM;
+
+        // --- Helper Functions ---
+        function getRandomColor() {
+            const letters = '0123456789ABCDEF';
+            let color = '#';
+            for (let i = 0; i < 6; i++) {
+                color += letters[Math.floor(Math.random() * 16)];
+            }
+            return color;
+        }
+
+        function generateClientId() {
+            return `player_${Math.random().toString(36).substring(2, 9)}`;
+        }
+
+         function getRoomFromHash() {
+            const hash = window.location.hash.substring(1); // Remove '#'
+            return hash || DEFAULT_ROOM;
+        }
+
+        // --- WebSocket Communication ---
+        function connectWebSocket() {
+            statusDisplay.textContent = `Connecting to ${roomName}...`;
+            ws = new WebSocket(PUBLIC_WSS_URL); // Connect to the public relay
+
+            ws.onopen = () => {
+                statusDisplay.textContent = 'Connected! Joining room...';
+                myClientId = generateClientId();
+                myClientColor = getRandomColor();
+                playerIdDisplay.textContent = myClientId;
+                playerColorIndicator.style.backgroundColor = myClientColor;
+
+                // Announce presence and request initial state
+                sendMessage({
+                    type: 'join',
+                    payload: { id: myClientId, color: myClientColor }
+                });
+
+                // Add self to player list immediately
+                gameState.players[myClientId] = { id: myClientId, color: myClientColor };
+                renderPlayerList();
+
+                // Request state from others after a short delay
+                clearTimeout(syncTimeout);
+                syncTimeout = setTimeout(() => {
+                    sendMessage({ type: 'requestSync' });
+                    statusDisplay.textContent = `Connected (${roomName})`;
+                }, 1500); // Wait 1.5 seconds for others to potentially respond
+            };
+
+            ws.onmessage = (event) => {
+                try {
+                    const message = JSON.parse(event.data);
+
+                    // Ignore messages sent by self IF the relay echoes them
+                     // SocketsBay seems to echo, so we need this check
+                    if (message.senderId === myClientId) {
+                        // console.log("Ignoring self-sent message:", message.type);
+                        return;
+                    }
+
+                    // console.log('Message received:', message);
+
+                    switch (message.type) {
+                        case 'join':
+                            if (!gameState.players[message.payload.id]) {
+                                console.log('Player joined:', message.payload.id);
+                                gameState.players[message.payload.id] = message.payload;
+                                renderPlayerList();
+                                // New player joined, maybe send our state if requested soon? (handled by requestSync)
+                            }
+                            break;
+
+                        case 'leave':
+                            if (gameState.players[message.payload.id]) {
+                                console.log('Player left:', message.payload.id);
+                                // Remove player's pieces
+                                Object.keys(gameState.pieces).forEach(pieceId => {
+                                    if (gameState.pieces[pieceId].ownerId === message.payload.id) {
+                                        delete gameState.pieces[pieceId];
+                                    }
+                                });
+                                delete gameState.players[message.payload.id];
+                                renderPlayerList();
+                                renderPieces(); // Re-render pieces after removal
+                            }
+                            break;
+
+                        case 'requestSync':
+                            // Someone is asking for the current state. Send ours.
+                             console.log(`Received state sync request from ${message.senderId || 'unknown'}. Sending my state.`);
+                             sendMessage({
+                                 type: 'syncState',
+                                 // targetId: message.senderId // Target specific user if relay supports it
+                                 payload: { gameState } // Send our current understanding of the state
+                             });
+                            break;
+
+                         case 'syncState':
+                             // Received a state snapshot from another client
+                             // Only accept if we haven't received one recently or have few items
+                            if (Object.keys(gameState.pieces).length === 0 || Date.now() - lastSyncTime > 5000) {
+                                console.log('Received state sync data. Applying...');
+                                gameState = message.payload.gameState;
+                                // Ensure our own player data is correct
+                                if (!gameState.players[myClientId]) {
+                                     gameState.players[myClientId] = { id: myClientId, color: myClientColor };
+                                } else {
+                                     gameState.players[myClientId].color = myClientColor; // Ensure color is ours
+                                }
+                                lastSyncTime = Date.now();
+                                renderAll(); // Full re-render
+                                statusDisplay.textContent = `State Synced (${roomName})`;
+                            } else {
+                                console.log("Ignoring potentially stale state sync.");
+                            }
+                             break;
+
+                        case 'addPiece':
+                            console.log('Adding piece remotely:', message.payload.id);
+                            gameState.pieces[message.payload.id] = message.payload;
+                            renderPieces();
+                            break;
+
+                        case 'movePiece':
+                            if (gameState.pieces[message.payload.pieceId]) {
+                                console.log('Moving piece remotely:', message.payload.pieceId);
+                                gameState.pieces[message.payload.pieceId].x = message.payload.x;
+                                gameState.pieces[message.payload.pieceId].y = message.payload.y;
+                                renderPieces();
+                            }
+                            break;
+
+                        case 'drawCard':
+                             console.log('Card drawn remotely:', message.payload.drawnNumber);
+                            gameState.lastDrawnCard = message.payload.drawnNumber;
+                            renderCardDice();
+                            break;
+
+                        case 'rollDice':
+                             console.log('Dice rolled remotely:', message.payload.type, message.payload.result);
+                            gameState.lastDiceRoll = { type: message.payload.type, result: message.payload.result };
+                            renderCardDice();
+                            break;
+
+                        default:
+                            console.warn('Unknown message type:', message.type);
+                    }
+                } catch (error) {
+                    console.error('Failed to parse message or handle:', event.data, error);
+                }
+            };
+
+            ws.onerror = (error) => {
+                console.error('WebSocket Error:', error);
+                statusDisplay.textContent = 'Connection Error!';
+            };
+
+            ws.onclose = (event) => {
+                statusDisplay.textContent = `Disconnected (${event.code})`;
+                console.log('WebSocket Closed:', event.reason, event.code);
+                ws = null;
+                // Maybe attempt to reconnect after a delay?
+                 setTimeout(connectWebSocket, 5000); // Reconnect after 5 seconds
+            };
+        }
+        let lastSyncTime = 0;
+
+        function sendMessage(message) {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                // Add senderId and room context to every message
+                message.senderId = myClientId;
+                message.room = roomName; // Include room for potential filtering/routing
+                // SocketsBay doesn't seem to use a room concept directly in WSS URL,
+                // but including it in payload might be useful if service changes or for logging.
+                // IMPORTANT: SocketsBay demo likely broadcasts to ALL connected clients on that demo URL.
+                // Proper room separation would require a different relay service or backend.
+                try {
+                    ws.send(JSON.stringify(message));
+                } catch (error) {
+                    console.error("Failed to send message:", error);
+                }
+            } else {
+                console.warn('WebSocket not open. Message not sent:', message.type);
+            }
+        }
+
+        // --- Rendering Functions ---
+        function createGrid() {
+            gridContainer.innerHTML = ''; // Clear previous grid
+            gridContainer.style.gridTemplateColumns = `repeat(${GRID_SIZE}, ${CELL_SIZE_PX}px)`;
+            gridContainer.style.gridTemplateRows = `repeat(${GRID_SIZE}, ${CELL_SIZE_PX}px)`;
+
+            for (let y = 0; y < GRID_SIZE; y++) {
+                for (let x = 0; x < GRID_SIZE; x++) {
+                    const cell = document.createElement('div');
+                    cell.classList.add('grid-cell');
+                    cell.dataset.x = x;
+                    cell.dataset.y = y;
+                    // Add drop listener to each cell
+                    cell.addEventListener('dragover', handleDragOver);
+                    cell.addEventListener('drop', handleDrop);
+                    cell.addEventListener('click', handleCellClick); // Use click for selection
+                    gridContainer.appendChild(cell);
+                }
+            }
+        }
+
+        function renderPieces() {
+             // Clear existing piece elements ONLY
+             gridContainer.querySelectorAll('.piece').forEach(p => p.remove());
+
+            for (const pieceId in gameState.pieces) {
+                const pieceData = gameState.pieces[pieceId];
+                const pieceElement = document.createElement('div');
+                pieceElement.classList.add('piece');
+                pieceElement.dataset.id = pieceId;
+                pieceElement.dataset.ownerId = pieceData.ownerId;
+                pieceElement.style.backgroundColor = pieceData.color || '#cccccc';
+                pieceElement.style.left = `${pieceData.x * CELL_SIZE_PX}px`;
+                pieceElement.style.top = `${pieceData.y * CELL_SIZE_PX}px`;
+                pieceElement.style.width = `${CELL_SIZE_PX * 0.75}px`;
+                pieceElement.style.height = `${CELL_SIZE_PX * 0.75}px`;
+                 // Add initials or identifier to piece (optional)
+                const ownerInitial = gameState.players[pieceData.ownerId]?.id.substring(0, 2) || '?';
+                // pieceElement.textContent = ownerInitial;
+                pieceElement.dataset.tooltip = `ID: ${pieceId.substring(0, 8)}... Owner: ${pieceData.ownerId}`;
+
+
+                // Only allow dragging your own pieces
+                if (pieceData.ownerId === myClientId) {
+                    pieceElement.draggable = true;
+                    pieceElement.addEventListener('dragstart', handleDragStart);
+                    pieceElement.style.cursor = 'grab';
+                } else {
+                    pieceElement.draggable = false;
+                     pieceElement.style.cursor = 'not-allowed';
+                }
+
+                gridContainer.appendChild(pieceElement);
+            }
+        }
+
+         function renderCardDice() {
+            lastCardDisplay.textContent = gameState.lastDrawnCard !== null ? gameState.lastDrawnCard : 'N/A';
+             if (gameState.lastDiceRoll.result !== null) {
+                lastRollDisplay.textContent = `${gameState.lastDiceRoll.type}: ${gameState.lastDiceRoll.result}`;
+            } else {
+                lastRollDisplay.textContent = 'N/A';
+            }
+         }
+
+        function renderPlayerList() {
+            playerListUl.innerHTML = ''; // Clear list
+            const playerIds = Object.keys(gameState.players);
+            playerCountDisplay.textContent = playerIds.length;
+
+            playerIds.forEach(pId => {
+                const player = gameState.players[pId];
+                const li = document.createElement('li');
+                const colorBox = document.createElement('span');
+                colorBox.classList.add('color-box');
+                colorBox.style.backgroundColor = player.color;
+                li.appendChild(colorBox);
+
+                const nameSpan = document.createElement('span');
+                 nameSpan.textContent = ` ${player.id}`;
+                 if (player.id === myClientId) {
+                    nameSpan.textContent += " (You)";
+                    nameSpan.style.fontWeight = 'bold';
+                }
+                li.appendChild(nameSpan);
+
+                playerListUl.appendChild(li);
+            });
+        }
+
+        function renderAll() {
+             // Re-render everything based on current gameState
+             renderPieces();
+             renderCardDice();
+             renderPlayerList();
+             // Grid itself rarely changes, only needs creation once usually
+        }
+
+
+        // --- Event Handlers ---
+
+        function handleCellClick(event) {
+             const cell = event.target.closest('.grid-cell');
+             if (!cell) return;
+
+             // Remove selection from previous cell
+             if (selectedCell) {
+                const prevSelectedEl = gridContainer.querySelector(`.grid-cell[data-x='${selectedCell.x}'][data-y='${selectedCell.y}']`);
+                if (prevSelectedEl) prevSelectedEl.classList.remove('selected');
+             }
+
+             // Select new cell
+             selectedCell = {
+                x: parseInt(cell.dataset.x, 10),
+                y: parseInt(cell.dataset.y, 10)
+             };
+             cell.classList.add('selected');
+             console.log(`Cell selected: (${selectedCell.x}, ${selectedCell.y})`);
+        }
+
+         addPieceBtn.addEventListener('click', () => {
+            if (selectedCell && myClientId) {
+                const pieceId = `piece_${myClientId}_${Date.now()}`; // More unique ID
+                const newPiece = {
+                    id: pieceId,
+                    ownerId: myClientId,
+                    x: selectedCell.x,
+                    y: selectedCell.y,
+                    color: myClientColor
+                };
+
+                 // Optimistic UI update (add locally immediately)
+                 gameState.pieces[pieceId] = newPiece;
+                 renderPieces(); // Re-render pieces
+
+                 // Send action to others
+                sendMessage({ type: 'addPiece', payload: newPiece });
+
+                // De-select cell
+                 const cellElement = gridContainer.querySelector(`.grid-cell[data-x='${selectedCell.x}'][data-y='${selectedCell.y}']`);
+                 if (cellElement) cellElement.classList.remove('selected');
+                 selectedCell = null;
+
+            } else {
+                alert('Please click on a grid cell first!');
+            }
+        });
+
+        drawCardBtn.addEventListener('click', () => {
+             const drawnNumber = Math.floor(Math.random() * 100) + 1;
+             gameState.lastDrawnCard = drawnNumber; // Update locally
+             renderCardDice(); // Render locally
+             sendMessage({ type: 'drawCard', payload: { drawnNumber } }); // Broadcast
+        });
+
+        rollDiceBtn.addEventListener('click', () => {
+            const selectedDice = diceSelect.value;
+            const diceType = parseInt(selectedDice.substring(1), 10);
+            if (!isNaN(diceType) && diceType >= 2 && diceType <= 100) {
+                const result = Math.floor(Math.random() * diceType) + 1;
+                gameState.lastDiceRoll = { type: selectedDice, result: result }; // Update locally
+                renderCardDice(); // Render locally
+                sendMessage({ type: 'rollDice', payload: { type: selectedDice, result: result } }); // Broadcast
+            }
+        });
+
+        // --- Drag and Drop Handlers ---
+        function handleDragStart(event) {
+             const pieceElement = event.target.closest('.piece');
+             if (!pieceElement || pieceElement.dataset.ownerId !== myClientId) {
+                 event.preventDefault(); // Should not happen if draggable=false, but safety check
+                 return;
+             }
+             draggedPieceInfo = {
+                element: pieceElement,
+                id: pieceElement.dataset.id,
+                // Store original grid position for potential revert if drop fails
+                startX: gameState.pieces[pieceElement.dataset.id]?.x,
+                startY: gameState.pieces[pieceElement.dataset.id]?.y
+             };
+             event.dataTransfer.setData('text/plain', pieceElement.dataset.id);
+             event.dataTransfer.effectAllowed = 'move';
+             // Optional: slight visual feedback
+             setTimeout(() => pieceElement.style.opacity = '0.5', 0);
+        }
+
+        function handleDragOver(event) {
+            event.preventDefault(); // Necessary to allow dropping
+            event.dataTransfer.dropEffect = 'move';
+        }
+
+        function handleDrop(event) {
+            event.preventDefault();
+             const targetCell = event.target.closest('.grid-cell'); // Ensure drop target is a cell
+
+             if (draggedPieceInfo && targetCell) {
+                 const pieceId = draggedPieceInfo.id;
+                 const targetX = parseInt(targetCell.dataset.x, 10);
+                 const targetY = parseInt(targetCell.dataset.y, 10);
+
+                 console.log(`Attempting to drop piece ${pieceId} onto (${targetX}, ${targetY})`);
+
+                 // Update local state optimistically
+                 if (gameState.pieces[pieceId]) {
+                     gameState.pieces[pieceId].x = targetX;
+                     gameState.pieces[pieceId].y = targetY;
+                     renderPieces(); // Re-render based on new local state
+
+                      // Send move action to other clients
+                     sendMessage({
+                        type: 'movePiece',
+                        payload: { pieceId: pieceId, x: targetX, y: targetY }
+                    });
+
+                 } else {
+                     console.error("Dropped piece ID not found in local state:", pieceId);
+                     // Maybe revert UI if needed, though renderPieces() should handle missing pieces
+                 }
+
+             } else {
+                  console.log("Drop occurred outside a valid cell or without a dragged piece.");
+             }
+
+             // Clean up drag styling regardless of success
+             if (draggedPieceInfo && draggedPieceInfo.element) {
+                 draggedPieceInfo.element.style.opacity = '1';
+             }
+            draggedPieceInfo = null; // Reset dragged piece info
+        }
+
+        // Make the whole grid container listen for drag end/cancel (more reliable cleanup)
+        gridContainer.addEventListener('dragend', (event) => {
+            if (draggedPieceInfo && draggedPieceInfo.element) {
+                 draggedPieceInfo.element.style.opacity = '1'; // Ensure opacity reset even if drop fails/cancels
+            }
+            draggedPieceInfo = null;
+        });
+
+
+        // --- Initialization ---
+        window.addEventListener('load', () => {
+            roomName = getRoomFromHash();
+            roomNameDisplay.textContent = `#${roomName}`;
+            console.log("Initializing game for room:", roomName);
+
+            createGrid();
+            connectWebSocket();
+            renderAll(); // Initial render (mostly empty)
+        });
+
+        // Send leave message when closing tab/window
+        window.addEventListener('beforeunload', () => {
+            if (ws && ws.readyState === WebSocket.OPEN && myClientId) {
+                // Use sendBeacon if available for higher chance of delivery on unload
+                 const data = JSON.stringify({ type: 'leave', senderId: myClientId, room: roomName, payload: { id: myClientId } });
+                 if (navigator.sendBeacon) {
+                    navigator.sendBeacon(PUBLIC_WSS_URL, data); // Beacon sends POST, relay might not support, fallback needed
+                     console.log("Attempted sendBeacon for leave message.");
+                     // SocketsBay likely won't process Beacon POST, but good practice
+                 } else {
+                    // Synchronous send (blocks closing slightly, less reliable)
+                    sendMessage({ type: 'leave', payload: { id: myClientId } });
+                    console.log("Sent leave message via standard send.");
+                 }
+
+            }
+        });
+
+         // Handle hash changes to potentially switch rooms (basic implementation)
+         window.addEventListener('hashchange', () => {
+             console.log("URL Hash changed detected.");
+             const newRoom = getRoomFromHash();
+             if (newRoom !== roomName) {
+                 alert(`Room changed to #${newRoom}. Reloading the page to join.`);
+                 window.location.reload(); // Simple way to handle room change
+             }
+         });
+
+    </script>
+
+</body>
+</html>
