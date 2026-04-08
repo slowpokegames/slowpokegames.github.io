@@ -1,0 +1,1516 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Great Tree</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; }
+body {
+  background: #12110a;
+  color: #d4c9a8;
+  font-family: Georgia, 'Times New Roman', serif;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  font-size: 17px;
+  line-height: 1.65;
+}
+#title-bar {
+  text-align: center;
+  padding: 7px 12px;
+  background: #1c1a0f;
+  border-bottom: 1px solid #3a3820;
+  color: #e8d87a;
+  font-size: 0.82em;
+  letter-spacing: 0.12em;
+  flex-shrink: 0;
+}
+#main {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+#output {
+  flex: 1;
+  overflow-y: auto;
+  padding: 18px 28px 10px;
+  max-width: 820px;
+  width: 100%;
+  margin: 0 auto;
+}
+#output p { margin-bottom: 0.55em; }
+.room-title { color: #e8d87a; font-weight: bold; font-size: 1.08em; margin-top: 0.5em; }
+.dialog { color: #a8c8d8; font-style: italic; }
+.dialog-name { color: #b8d0a4; font-weight: bold; font-style: normal; }
+.err  { color: #a06050; }
+.sys  { color: #6a7860; font-style: italic; }
+.win  { color: #e8d87a; font-weight: bold; }
+.em   { color: #d4a868; }
+.sep  { color: #2e2d1a; user-select: none; }
+.echo { color: #6a8858; margin-bottom: 0.15em; }
+
+#input-wrap {
+  display: flex;
+  align-items: center;
+  padding: 9px 28px;
+  border-top: 1px solid #2e2d1a;
+  background: #0d0c07;
+  max-width: 820px;
+  width: 100%;
+  margin: 0 auto;
+  flex-shrink: 0;
+}
+#prompt-sym { color: #6a8858; margin-right: 9px; user-select: none; }
+#cmd {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: #d4c9a8;
+  font-family: inherit;
+  font-size: 1em;
+  outline: none;
+  caret-color: #7a9a6a;
+}
+#output::-webkit-scrollbar { width: 5px; }
+#output::-webkit-scrollbar-track { background: #12110a; }
+#output::-webkit-scrollbar-thumb { background: #3a3820; border-radius: 3px; }
+</style>
+</head>
+<body>
+<div id="title-bar">✦ &nbsp; THE GREAT TREE &nbsp; ✦ &nbsp; A Birthday Adventure</div>
+<div id="main">
+  <div id="output"></div>
+</div>
+<div id="input-wrap">
+  <span id="prompt-sym">❯</span>
+  <input id="cmd" type="text" autocomplete="off" autocorrect="off"
+         autocapitalize="off" spellcheck="false" placeholder="what do you do?" />
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+//  THE GREAT TREE  —  a text adventure
+// ═══════════════════════════════════════════════════════════════
+
+// ── State ──────────────────────────────────────────────────────
+const G = {
+  playerName: '',
+  room: 'high_bough',
+  inv: [],
+  mushrooms: 0,
+  flags: {},
+  frogIdx: 0,        // 0-5 across six rooms; -1 = kissed
+  wizHint: 0,
+  basementUnlocked: false,
+  echoHeard: false,
+  namePrompt: true,
+};
+
+const FROG_PATH = [
+  'lookout_perch', 'canopy_walk', 'mushroom_ring',
+  'bower', 'cooking_grotto', 'grotto',
+];
+
+// mushroom spots keyed by room id
+const MSPOT = {
+  clearing: false, behind_falls: false, bark_nook: false,
+  fungi_nook: false, cooking_grotto: false, blind_grotto: false,
+};
+
+const f  = k => !!G.flags[k];
+const sf = k => { G.flags[k] = true; };
+const has = id => G.inv.includes(id);
+const add = id => { if (!has(id)) G.inv.push(id); };
+const rm  = id => { G.inv = G.inv.filter(i => i !== id); };
+
+function frogRoom() {
+  return G.frogIdx >= 0 && G.frogIdx < FROG_PATH.length
+    ? FROG_PATH[G.frogIdx] : null;
+}
+
+// ── Wizard hints ───────────────────────────────────────────────
+const HINTS = [
+  "The mermaid in the pool of falling water knows something the water has kept. Seek her before you seek anything else.",
+  "The white creature in the blue nest misses a color she has not seen in some time. The bower — past the ivy curtain — holds what she has lost.",
+  "Fire does not kindle itself. Old tools sleep in old places — even the prettiest ones.",
+  "The fox's door is old, and old doors remember old keys. A key that smells of cold water may be exactly what you need.",
+  "The beast at the bridge is not cruel — she is hungry. The Woman of the Tree can help, if her fire is lit and she has what she needs.",
+  "The words on the banner are not decoration. Say them clearly, in the places that wait for them. Stone can listen.",
+];
+
+// ── Dictionary ─────────────────────────────────────────────────
+const DICT_ALL = [
+  ['AQUA','water'],['SILVA','forest'],['LUNA','moon'],['STELLA','star'],
+  ['PORTA','door'],['VIA','road'],['PUELLA','girl'],['CANIS','dog'],
+  ['ARBOR','tree'],['IGNIS','fire'],['TERRA','earth'],['VENTUS','wind'],
+  ['LUMEN','light'],['UMBRA','shadow'],['FLOS','flower'],['MEL','honey'],
+  ['MURUS','wall'],['PONS','bridge'],['CLAVIS','key'],['ITER','journey'],
+  ['DONUM','gift'],['AMICA','friend'],['NAUTA','sailor'],['PISCIS','fish'],
+  ['AVSCULTA','listen'],['AMA','love'],['DISCE','learn'],
+];
+const KEY_WORDS = [['AVSCULTA','listen'],['AMA','love'],['DISCE','learn']];
+const FILLER = DICT_ALL.filter(w => !KEY_WORDS.some(k => k[0]===w[0]));
+
+function readDict() {
+  print("The dictionary is old and smells of pine.");
+  print("");
+  if (f('seenBanner')) {
+    print("You flip to the pages you're looking for. Three entries seem to glow a little brighter than the rest:");
+    print("");
+    KEY_WORDS.forEach(([lat,eng]) =>
+      print(`&nbsp;&nbsp;<span class="em">${lat}</span> &nbsp;—&nbsp; <em>${eng}</em>`));
+    print("");
+    print("You feel as though you already knew this, somewhere inside.");
+  } else {
+    print("You flip to a few pages at random:");
+    print("");
+    const shown = [];
+    KEY_WORDS.forEach(kw => { if (Math.random() < 0.30) shown.push(kw); });
+    const others = [...FILLER].sort(() => Math.random()-0.5);
+    while (shown.length < 5) shown.push(others.pop());
+    shown.sort(() => Math.random()-0.5);
+    shown.forEach(([lat,eng]) =>
+      print(`&nbsp;&nbsp;<span class="em">${lat}</span> &nbsp;—&nbsp; <em>${eng}</em>`));
+    print("");
+    print("You close it again. Maybe some of those will matter later.", 'sys');
+  }
+}
+
+// ── Rooms ──────────────────────────────────────────────────────
+// exits: { dir: 'roomId' | fn→roomId|null }
+// desc: fn returning html string (paragraphs separated by \n\n)
+
+const ROOMS = {
+
+  // ── upstairs ─────────────────────────────────────────
+
+  high_bough: {
+    name: "The High Bough",
+    desc() {
+      return `You are nestled in the fork of an enormous tree — so tall that clouds drift lazily past its upper branches. Soft golden light filters through leaves the size of blankets. All around you, pale pink and violet flowers wind along the vines overhead. A second mossy nest sits on a neighboring branch nearby, still warm but empty.
+
+Below you, the forest floor is hidden in green shadow, a very long way down. A wide branch leads <b>south</b> toward the heart of the tree. There is also a <b>closet</b> hollow in the bark beside you.`;
+    },
+    exits: { south:'canopy_walk', closet:'elise_closet' },
+  },
+
+  elise_closet: {
+    name: "The Hollow",
+    desc() {
+      return `A deep hollow carved into the trunk, the bark worn silky-smooth inside. It smells of cedar and old wood.
+
+To the <b>south</b>, back to the bough.`;
+    },
+    exits: { south:'high_bough', out:'high_bough', back:'high_bough' },
+  },
+
+  canopy_walk: {
+    name: "The Canopy Walk",
+    desc() {
+      const frog = frogRoom()==='canopy_walk';
+      return `A broad branch — wide as a road — stretches between the great trunks of several enormous trees. Hanging bridges of twisted vine sway in every direction.
+
+To the <b>north</b>, the high bough where you woke. To the <b>west</b>, the oldest trunk, its bark dark and knotted. To the <b>northwest</b>, a mossy hollow. To the <b>southwest</b>, vines part over a wide opening. To the <b>northeast</b>, blue feathers wind around an entrance. To the <b>southeast</b>, bark carved with strange symbols. To the <b>south</b>, the sound of rushing water. To the <b>down</b>, the root-staircase winds toward the forest floor.${frog ? `\n\nA large green frog sits on a vine nearby, motionless, watching you with enormous golden eyes.` : ''}`;
+    },
+    exits: {
+      north:'high_bough', west:'great_hollow', northwest:'mossy_chamber',
+      southwest:'overlook', northeast:'songbird_nest', southeast:'lookout_perch',
+      south:'grotto', down:'root_chamber', closet:'bark_nook', east:'bark_nook',
+    },
+  },
+
+  grotto: {
+    name: "The Grotto",
+    desc() {
+      const talked = f('mermaidTalked');
+      const finalFrog = frogRoom()==='grotto';
+      return `A hollow of living root and stone, cool and full of mist. A waterfall drops from somewhere far above into a pool of perfect blue-green water. Tiny silver fish dart beneath the surface.
+
+${talked
+  ? `The mermaid has slipped away — or perhaps she is behind the falls again.`
+  : `A mermaid sits on a root at the water's edge, dark-haired, humming softly to herself. She looks up when she sees you and brightens.`}
+
+The waterfall roars. Behind its curtain, the darkness seems to go back further than it should. You could try going <b>behind</b> the falls.
+
+To the <b>north</b>, the canopy walk.${finalFrog && !f('frogKissed') ? `\n\nA large green frog floats on a lily pad at the edge of the pool, watching you with golden eyes. He doesn't leap this time. He simply waits.` : ''}`;
+    },
+    exits: {
+      north:'canopy_walk',
+      behind:'behind_falls', further:'behind_falls', west:'behind_falls',
+    },
+  },
+
+  behind_falls: {
+    name: "Behind the Waterfall",
+    desc() {
+      const keyGone = has('iron_key') || f('keyTaken');
+      const mushroomGone = MSPOT.behind_falls;
+      return `The water crashes deafeningly on either side of you, but you stay dry. A narrow ledge leads back into the rock, lit by blue-green light through the curtain of water.
+
+${keyGone
+  ? `The crack in the stone where the key rested is empty now.`
+  : `Wedged into a crack in the stone, wrapped in a leaf tied with root-fiber: a <span class="em">small iron key</span>, old and green with age.`}
+${!mushroomGone ? `\nA <span class="em">mushroom</span> grows on the damp ledge, glowing faintly blue.` : ''}
+
+To the <b>east</b>, back through the waterfall.`;
+    },
+    exits: { east:'grotto', out:'grotto', back:'grotto' },
+  },
+
+  great_hollow: {
+    name: "The Great Hollow",
+    desc() {
+      return `Inside the oldest trunk in the forest, a vast chamber has grown warm and golden over centuries. Hundreds of tiny sleeping faces are carved into the walls — humans, foxes, owls, mice — all dreaming. The floor is deep, soft moss.
+
+To the <b>east</b>, the canopy walk. To the <b>northwest</b>, a root-arch leads to a quieter chamber. To the <b>southwest</b>, vines part like curtains over a high opening.`;
+    },
+    exits: { east:'canopy_walk', northwest:'mossy_chamber', southwest:'overlook' },
+  },
+
+  mossy_chamber: {
+    name: "The Mossy Chamber",
+    desc() {
+      return `A small, still room where everything is covered in velvet-soft green moss. A dark pool in the floor reflects your face back — perhaps a little too perfectly.
+
+To the <b>southeast</b>, the great hollow. To the <b>east</b>, the canopy walk.`;
+    },
+    exits: { southeast:'great_hollow', east:'canopy_walk' },
+  },
+
+  overlook: {
+    name: "The Overlook",
+    desc() {
+      return `A platform of ancient bark juts out to the southwest, giving a wide view of the deep forest below. Bark-scrolls covered in cramped, looping writing hang from every branch. Crystals dangle on strings, throwing tiny rainbows across the floor. Dried flowers, interesting stones, and small carved figures are arranged with great care and no obvious logic.
+
+An old wizard sits cross-legged in the middle of it all, eyes half-closed, wearing robes the color of a sunset after rain. A long silver braid falls over one shoulder. He smells of pine and something sweeter.
+
+A thick <span class="em">dictionary</span> lies open on a root-shelf nearby.
+
+To the <b>northeast</b>, the great hollow. To the <b>north</b>, the canopy walk.`;
+    },
+    exits: { northeast:'great_hollow', north:'canopy_walk' },
+  },
+
+  songbird_nest: {
+    name: "The Songbird Nest",
+    desc() {
+      const gifted = f('unicornGifted');
+      return `A hollow where everything is blue. Blue feathers line the walls in careful rows. Blue river stones spiral across the floor. Blue flowers — the tiny kind that smell of honey — wind up the entrance arch. Wind chimes of blue-dyed wood sing softly at the entrance.
+
+A unicorn stands at the center, pure white, her horn like twisted morning frost, her eyes a calm, patient blue.
+
+${gifted
+  ? `She dips her head gracefully when she sees you.`
+  : `At her hooves, almost hidden by the moss, lies a single blue flower — pressed flat and dried, kept long past its time, as if she has held onto it through a very long winter.\n\nShe watches you. She waits.`}
+
+To the <b>southwest</b>, the canopy walk.`;
+    },
+    exits: { southwest:'canopy_walk', south:'canopy_walk' },
+  },
+
+  lookout_perch: {
+    name: "The Lookout Perch",
+    desc() {
+      const frogHere = frogRoom()==='lookout_perch';
+      return `A branch that juts boldly outward, open to the sky on three sides. The view to the south is remarkable — straight down to a walled garden, and rising from its center, the broken towers of an ancient fortress. Something glints at the very top.
+
+A carved wooden <span class="em">telescope</span> leans against the trunk.${frogHere ? `\n\nA large green frog sits perfectly still at the very tip of the branch, staring south with enormous golden eyes. He seems completely unbothered by the height.` : ''}
+
+To the <b>northwest</b>, the canopy walk.`;
+    },
+    exits: { northwest:'canopy_walk', north:'canopy_walk' },
+  },
+
+  bark_nook: {
+    name: "The Bark Nook",
+    desc() {
+      return `A small hollow just off the canopy walk. It smells of old leaves and mystery.${!MSPOT.bark_nook ? `\n\nNestled in the corner: a small <span class="em">mushroom</span>, deep purple and very quiet.` : ''}
+
+To the <b>west</b>, the canopy walk.`;
+    },
+    exits: { west:'canopy_walk', out:'canopy_walk' },
+  },
+
+  // ── downstairs ────────────────────────────────────────
+
+  root_chamber: {
+    name: "The Root Chamber",
+    desc() {
+      return `At the base of the great tree, enormous roots arch up around you like the fingers of a buried giant, forming a high vaulted chamber. Light filters down from the canopy far above.
+
+To the <b>north</b>, a grand arch of pale bark opens to a sunlit clearing. To the <b>west</b>, flowers spill from a leafy curtain. To the <b>east</b>, a circle of glowing mushrooms pulses softly. To the <b>south</b>, the earth gives way to a warm, dark burrow. To the <b>up</b>, the root-staircase winds back toward the canopy.`;
+    },
+    exits: { up:'canopy_walk', north:'clearing', west:'bower', east:'mushroom_ring', south:'fox_warren' },
+  },
+
+  clearing: {
+    name: "The Clearing",
+    desc() {
+      return `A sunlit open space before the great tree. The forest watches from all sides. To the <b>north</b>, a path winds between the pines toward a road — and who knows what else. To the <b>south</b>, the great bark arch leads back inside.${!MSPOT.clearing ? `\n\nHalf-hidden at the base of the bark arch, nestled in the roots: a small <span class="em">mushroom</span>, deep red with white spots.` : ''}`;
+    },
+    exits: { south:'root_chamber', north:'road' },
+  },
+
+  road: {
+    name: "The Road",
+    desc() { return ``; },
+    exits: { south:'clearing' },
+    onEnter() {
+      print("The path leads out of the clearing and into the trees, winding away into distance. You can almost hear voices — friends, adventures not yet begun.");
+      print("But the forest calls you back. <em>Today is not that day.</em>", 'sys');
+      G.room = 'clearing';
+      print("");
+      printRoom();
+    },
+  },
+
+  bower: {
+    name: "The Bower",
+    desc() {
+      const frogHere = frogRoom()==='bower';
+      return `Past a curtain of hanging ivy, the roots have grown into shelves and curved seats padded with fine moss. Pressed flowers cover every wall. Beautiful things sit on the shelves: a crystal acorn, a golden leaf, a glass bottle with a tiny ship inside it, and a small <span class="em">ceramic bunny</span>, glazed white, sitting very upright with its paws folded.
+
+It is heavier than it looks.${!f('flowerTaken') ? `\n\nA cluster of small <span class="em">blue flowers</span> grows from a crack in the root-wall, fragrant and bright.` : ''}${frogHere ? `\n\nA large green frog crouches half-hidden under a golden leaf on the lowest shelf, very still.` : ''}
+
+To the <b>east</b>, the root chamber.`;
+    },
+    exits: { east:'root_chamber', out:'root_chamber' },
+  },
+
+  mushroom_ring: {
+    name: "The Mushroom Ring",
+    desc() {
+      const frogHere = frogRoom()==='mushroom_ring';
+      return `A perfect circle of enormous mushrooms, each glowing a different color — amber, violet, sea-green, rose. In the center, a flat stone serves as a table, set with acorn-cap bowls and leaf-plates as though a feast just ended.${frogHere ? `\n\nA large green frog sits on the amber mushroom, perfectly still, staring at nothing in particular.` : ''}
+
+To the <b>west</b>, the root chamber. To the <b>south</b>, between the two tallest mushrooms, a path leads deeper.`;
+    },
+    exits: { west:'root_chamber', south:'fox_warren' },
+  },
+
+  fox_warren: {
+    name: "The Fox Warren",
+    desc() {
+      const unlocked = f('keyUsed');
+      return `The earth here is soft and warm, and the roots overhead make a low, cozy ceiling. Fox-prints cover the floor in every direction. It smells of dry leaves and autumn and something just slightly wild.
+
+To the <b>north</b>, the root chamber. To the <b>west</b>, a narrow root-tunnel leads further in. To the <b>south</b>, a heavy wooden door stands iron-banded${unlocked ? `, open now, letting in garden-scented air.` : `. The keyhole is old and green with age.`}`;
+    },
+    exits: {
+      north:'root_chamber', west:'root_tunnel',
+      south() {
+        if (!f('keyUsed')) { print("The door is locked. The keyhole is old and green with age.", 'err'); return null; }
+        return 'old_garden';
+      },
+    },
+  },
+
+  root_tunnel: {
+    name: "The Root Tunnel",
+    desc() {
+      return `A low tunnel where roots twist overhead. The air smells of damp earth and, faintly, something cooking. To the <b>south</b>, a tiny side-chamber glows with soft colored light. To the <b>north</b>, the roots part around a dark opening that drops away into deep earth. To the <b>east</b>, the fox warren. To the <b>west</b>, the cooking grotto.`;
+    },
+    exits: { east:'fox_warren', west:'cooking_grotto', south:'fungi_nook', north:'cave_down' },
+  },
+
+  fungi_nook: {
+    name: "The Fungi Nook",
+    desc() {
+      return `A tiny chamber whose walls are covered in bioluminescent mushrooms — dozens of them, in every shade of blue, green, gold, and pink, pulsing gently like slow breathing.${!MSPOT.fungi_nook ? `\n\nOne mushroom near the floor is different — smaller, brighter, clearly <span class="em">pickable</span>.` : ''}
+
+To the <b>north</b>, the root tunnel.`;
+    },
+    exits: { north:'root_tunnel', out:'root_tunnel' },
+  },
+
+  cooking_grotto: {
+    name: "The Cooking Grotto",
+    desc() {
+      const frogHere = frogRoom()==='cooking_grotto';
+      const fire = f('hearthLit');
+      return `A cave of smooth stone and living roots. ${fire ? `A warm fire burns in a hollow log, sending sparks spiraling up through a hole in the ceiling.` : `A hollow log sits cold in the center — a fireplace waiting for flame.`} Clay pots and bunches of dried herbs hang from root-hooks. It smells of woodsmoke and blackberries and something harder to name.
+
+The Woman of the Tree stands at the stone hearth, stirring a pot with a long wooden spoon. She is beautiful in the way that old trees are beautiful — warm and steady, with kind eyes that catch the firelight. When she looks up at you, the whole room feels a little more like home.${frogHere ? `\n\nA large green frog sits on the hearthstone, watching the ${fire ? 'fire' : 'cold log'} with great interest.` : ''}${!MSPOT.cooking_grotto ? `\n\nUnder a clay pot on a low shelf: a <span class="em">mushroom</span>, golden-yellow and plump.` : ''}
+
+To the <b>north</b>, a passage rises toward daylight. To the <b>east</b>, the root tunnel. To the <b>west</b>, something rushes and gurgles.`;
+    },
+    exits: { north:'cave_mouth', east:'root_tunnel', west:'stream_cave' },
+  },
+
+  stream_cave: {
+    name: "The Stream Cave",
+    desc() {
+      return `An underground stream cuts through this cave fast and cold, churning white over smooth stones. The mist is chilly. Stepping stones cross the water — they wobble.
+
+To the <b>east</b>, the cooking grotto.`;
+    },
+    exits: { east:'cooking_grotto', out:'cooking_grotto' },
+  },
+
+  cave_mouth: {
+    name: "The Cave Mouth",
+    desc() {
+      const torchGone = has('torch') || has('torch_lit') || f('torchTaken');
+      return `A broad, low cave. Two great archways open to the <b>north</b> letting in pale daylight and the smell of pine. Animal tracks cross the dusty floor.${!torchGone ? `\n\nLeaning against the wall near the left arch, wrapped in a protective leaf: a <span class="em">torch</span>, unlit, smelling of pine resin.` : ''}
+
+To the <b>south</b>, the cooking grotto.`;
+    },
+    exits: { south:'cooking_grotto', north:'clearing', out:'clearing' },
+  },
+
+  // ── outdoors ──────────────────────────────────────────
+
+  old_garden: {
+    name: "The Old Garden",
+    desc() {
+      return `Stone walls — more moss than stone now — surround a wild tangle of overgrown flowers, brambles, and ancient fruit trees. The only door is the one you came through, iron-banded, behind you to the <b>north</b>.
+
+In the corner, an oak tree older than the wall grows through it, its bark split into a hollow just big enough to reach into. A soft golden light glows inside, and the smell of honey is unmistakable.${f('honeyTaken') ? `` : ` The hollow holds something <span class="em">golden</span>.`}
+
+At the garden's center, half-drowned in ivy, fortress towers rise. Something glints at the very top. The walls are sheer from here — there must be another way in.`;
+    },
+    exits: { north:'fox_warren' },
+  },
+
+  ravine: {
+    name: "The Ravine",
+    desc() {
+      const calm = f('sunnyCalmed');
+      return `A narrow passage between the great tree and the garden wall. Far below, the rocks are dark and jagged.
+
+A suspension bridge of old rope and wooden planks climbs steeply toward the fortress wall. ${calm
+  ? `A yellow dog with a curly tail lies contentedly at the bridge's foot, tail over her nose, letting you pass freely.`
+  : `Sitting at the foot of the bridge is a yellow dog with a tightly curled tail and amber eyes. She is roughly the size of a small sofa. She is not growling. She does not need to. She is simply <em>there</em> — immovable as geology — watching you with patient certainty.`}
+
+A dark cave mouth opens at the base of the ravine to the <b>east</b>. To the <b>north</b>, a path leads around to the clearing.${calm ? `\n\nThe bridge is clear. You may go <b>up</b> or <b>cross</b> it.` : ''}`;
+    },
+    exits: {
+      north:'clearing', east:'east_cave_mouth', cave:'east_cave_mouth',
+      up() {
+        if (!f('sunnyCalmed')) { print("Sunny doesn't move. She is immovable as geology.", 'err'); return null; }
+        return 'fortress_ground';
+      },
+      cross() {
+        if (!f('sunnyCalmed')) { print("Sunny is blocking the bridge. She is not moving.", 'err'); return null; }
+        return 'fortress_ground';
+      },
+      bridge() {
+        if (!f('sunnyCalmed')) { print("Sunny is blocking the bridge. She is not moving.", 'err'); return null; }
+        return 'fortress_ground';
+      },
+    },
+  },
+
+  // ── basement maze ─────────────────────────────────────
+
+  cave_down: {
+    name: "The Root Mouth",
+    desc() {
+      if (G.basementUnlocked) {
+        return `The Root Mouth — entrance to the caverns below. You know these passages now.\n\nYou could <b>fast travel</b> straight through to the east side, or climb <b>up</b> to the root tunnel.`;
+      }
+      const dark = !has('torch_lit');
+      const noMap = !has('basement_map');
+      return `Roots form a rough ladder into cold earth. ${dark ? `It is dark below. Very dark. You would need a lit torch to go further.` : `Your torch flickers, throwing long shadows down the passage.`}${noMap ? ` You'd also want a map — these caverns are known to tangle.` : ''}
+
+To the <b>up</b>, the root tunnel.`;
+    },
+    exits: {
+      up:'root_tunnel',
+      down() {
+        if (G.basementUnlocked) return 'east_cave_mouth';
+        if (!has('torch_lit')) { print("It is too dark to go further. You need a lit torch.", 'err'); return null; }
+        if (!has('basement_map')) { print("You step down but immediately feel hopelessly lost in the dark. You climb back up. You'll want a map.", 'err'); return null; }
+        return 'dripping_hall';
+      },
+      north() {
+        if (G.basementUnlocked) return 'east_cave_mouth';
+        return null;
+      },
+      'fast travel'() { if (G.basementUnlocked) return 'east_cave_mouth'; return null; },
+    },
+  },
+
+  dripping_hall: {
+    name: "The Dripping Hall",
+    desc() {
+      return `A long passage with two branches. From the <b>west</b>, a constant loud dripping echoes — <em>plip, plip, plip</em>. The <b>east</b> branch is quieter.
+
+Your map reads: <span class="em"><em>"Where the dripping echoes loudest — that way leads nowhere. Go where it is quiet."</em></span>
+
+To the <b>up</b>, back to the root mouth.`;
+    },
+    exits: { west:'blind_grotto', east:'fox_chamber', up:'cave_down', back:'cave_down' },
+  },
+
+  blind_grotto: {
+    name: "The Blind Grotto",
+    desc() {
+      return `The passage narrows and closes into a dead end. The dripping here is very loud.${!MSPOT.blind_grotto ? `\n\nTucked into a crevice, glowing faintly orange: a <span class="em">mushroom</span>. How did it get this far down?` : ''}
+
+To the <b>east</b>, back the way you came.`;
+    },
+    exits: { east:'dripping_hall', back:'dripping_hall' },
+  },
+
+  fox_chamber: {
+    name: "The Fox Chamber",
+    desc() {
+      return `The walls here are warm, and the earth smells strongly of fox — old dens, old memories. Two passages continue: one following the fox-smell to the <b>south</b>, one going <b>east</b> into fresher air.
+
+Your map reads: <span class="em"><em>"The earth remembers its tenants. Do not follow memory."</em></span>
+
+To the <b>west</b>, back.`;
+    },
+    exits: { south:'old_den', east:'bat_roost', west:'dripping_hall' },
+  },
+
+  old_den: {
+    name: "An Old Den",
+    desc() {
+      return `The tunnel ends in a rounded chamber that smells powerfully of fox. Old bones and smooth stones are arranged in neat piles. No way forward.
+
+To the <b>north</b>, back.`;
+    },
+    exits: { north:'fox_chamber', back:'fox_chamber' },
+  },
+
+  bat_roost: {
+    name: "The Bat Roost",
+    desc() {
+      return `A soft papery rustling overhead. The ceiling is covered in bats — hundreds of them, hanging in tight clusters. They shift and resettle, their small faces all pointing... <b>east</b>.
+
+Your map reads: <span class="em"><em>"The bats know which way the sky is. You should too."</em></span>
+
+To the <b>west</b>, back.`;
+    },
+    exits: { east:'stream_junction', west:'fox_chamber' },
+  },
+
+  stream_junction: {
+    name: "The Underground Stream",
+    desc() {
+      return `An underground stream appears here, running swiftly. Two passages leave the chamber: one going <b>east</b> with the current, one going <b>north</b> against it.
+
+Your map reads: <span class="em"><em>"Follow the water. It knows where out is."</em></span>
+
+To the <b>west</b>, back.`;
+    },
+    exits: { east:'riddle_junction', north:'stream_head', west:'bat_roost' },
+  },
+
+  stream_head: {
+    name: "The Head of the Stream",
+    desc() {
+      return `The stream bubbles up from a crack in the rock here, cold and bright. No way forward.
+
+To the <b>south</b>, back downstream.`;
+    },
+    exits: { south:'stream_junction', back:'stream_junction' },
+  },
+
+  riddle_junction: {
+    name: "The Last Chamber",
+    desc() {
+      return `The passage opens into a wider chamber. Two exits lead forward, but one has been sealed with smooth stone. The other is only darkness.
+
+Carved deep into the wall before you:
+
+<span class="em"><em>"I speak without a mouth and hear without ears.<br>
+I have no body, but I come alive with the wind.<br>
+What am I?"</em></span>
+
+Your map ends here. A final note in cramped handwriting: <span class="em"><em>"An old friend lives in the last chamber. She will show you the way if you call out to her."</em></span>
+
+To the <b>west</b>, back. To the <b>east</b>... if you can find the way.`;
+    },
+    exits: {
+      west:'stream_junction',
+      east() {
+        if (!G.echoHeard) {
+          print("The darkness offers no clue which way leads out. The riddle waits.", 'err');
+          return null;
+        }
+        G.basementUnlocked = true;
+        return 'east_cave_mouth';
+      },
+    },
+  },
+
+  east_cave_mouth: {
+    name: "The East Cave Mouth",
+    desc() {
+      return `The caverns open here and suddenly — daylight. Cold air rushes in. You emerge at the base of a rocky ravine, the cave mouth dark behind you.
+
+To the <b>west</b>, back into the caverns (you know the way now). To the <b>north</b>, the ravine.`;
+    },
+    exits: { north:'ravine', west:'cave_down', back:'cave_down' },
+    onEnter() { G.basementUnlocked = true; },
+  },
+
+  // ── fortress ──────────────────────────────────────────
+
+  fortress_ground: {
+    name: "The Ancient Fortress — Ground Level",
+    desc() {
+      return `Stone floors, crumbling battlements, arrow-slit windows looking out over the whole forest. Vines have split some walls, but the main tower still stands. An inscription above the inner gate — worn nearly flat, but readable: a name, old and proud.
+
+Stairs wind upward into the tower. To the <b>south</b>, the bridge back to the ravine. To the <b>up</b>, the first level.`;
+    },
+    exits: { south:'ravine', up:'fortress_l1' },
+  },
+
+  fortress_l1: {
+    name: "The Ancient Fortress — First Level",
+    desc() {
+      if (f('towerL1')) {
+        return `The first landing. The pale roots that once barred the stairway lie curled at the sides, still and quiet. The way <b>up</b> is open.\n\nTo the <b>down</b>, the ground floor.`;
+      }
+      return `The first landing. A tangle of pale roots is woven across the stairway from wall to wall, tight as a locked gate.
+
+Above the roots, carved deep into the stone: &nbsp;<span style="font-size:1.4em">👂</span>
+
+There is no keyhole. No handle. No latch. The roots simply wait. The whole chamber waits. It is quieter here than it should be, as if the stone itself is paying attention.
+
+To the <b>down</b>, the ground floor.`;
+    },
+    exits: {
+      down:'fortress_ground',
+      up() {
+        if (!f('towerL1')) { print("The roots hold fast. The chamber is waiting for something — but not a key.", 'err'); return null; }
+        return 'fortress_l2';
+      },
+    },
+  },
+
+  fortress_l2: {
+    name: "The Ancient Fortress — Second Level",
+    desc() {
+      if (f('towerL2')) {
+        return `The second landing. The amber light has faded to a gentle glow at the edges of the steps. The way <b>up</b> is open.\n\nTo the <b>down</b>, the first level.`;
+      }
+      return `The second landing. The stairway is filled with a warm amber light you cannot walk into — it pushes back, gently but firmly, like a held breath.
+
+Above the threshold, carved in the stone: &nbsp;<span style="font-size:1.4em">❤️</span>
+
+The light hums softly. It does not feel unkind. It feels like it is listening for something.
+
+To the <b>down</b>, the first level.`;
+    },
+    exits: {
+      down:'fortress_l1',
+      up() {
+        if (!f('towerL2')) { print("The amber light holds you back, warm and patient. It is waiting.", 'err'); return null; }
+        return 'fortress_l3';
+      },
+    },
+  },
+
+  fortress_l3: {
+    name: "The Ancient Fortress — Third Level",
+    desc() {
+      if (f('towerL3')) {
+        return `The final stairs. The carved stone that once blocked the hatch rests to one side now. Light pours down through the open hatch.\n\nTo the <b>up</b>, the tower top. To the <b>down</b>, the second level.`;
+      }
+      return `The final stairs. Wind through the arrow-slits. A single flat stone blocks the hatch to the roof — smooth and heavy, fitting perfectly into the frame. No seam to grip. No lever.
+
+Above it, in careful letters: &nbsp;<span style="font-size:1.4em">🎓</span>
+
+Three symbols. Three words on a banner, seen through a telescope, from very far away.
+
+You think you understand now.
+
+To the <b>down</b>, the second level.`;
+    },
+    exits: {
+      down:'fortress_l2',
+      up() {
+        if (!f('towerL3')) { print("The stone doesn't budge. Something is still waiting.", 'err'); return null; }
+        return 'tower_top';
+      },
+    },
+  },
+
+  tower_top: {
+    name: "The Tower Top",
+    desc() {
+      return `You pull yourself through the hatch into open sky. Wind. Light. The whole world laid out below you — the great tree, the walled garden, the clearing, the road, the deep green in every direction.
+
+And there, set carefully in the very center of the stone floor, is a <span class="em">present</span>. Your name is on it, written in careful letters.`;
+    },
+    exits: { down:'fortress_l3' },
+    onEnter() {
+      if (!f('gameWon')) {
+        sf('gameWon');
+        setTimeout(() => {
+          print("");
+          print(`<span class="win" style="font-size:1.3em; letter-spacing:0.1em">✦ &nbsp; Happy Birthday, ${G.playerName || 'adventurer'}. &nbsp; ✦</span>`);
+          print("");
+          print("You hold the present for a long moment, the wind in your hair and the whole world below.");
+          print("Inside, whatever it is — it was always yours.");
+          print("");
+          print("<em>Thanks for playing. With love.</em>", 'dialog');
+        }, 700);
+      }
+    },
+  },
+};
+
+// ── NPCs ───────────────────────────────────────────────────────
+
+function talkTo(name) {
+  const n = name.toLowerCase().replace(/^(the|a|an)\s+/, '');
+
+  // mermaid
+  if (['mermaid','her','woman in pool'].some(k => n.includes(k))) {
+    if (G.room !== 'grotto') { print("She's not here.", 'err'); return; }
+    if (f('mermaidTalked')) {
+      print(`The mermaid surfaces for a moment and smiles.`);
+      print(`<span class="dialog">"Still looking? Remember — behind the falls. You won't melt."</span>`, 'dialog');
+      print(`She winks and dives back under.`);
+    } else {
+      sf('mermaidTalked');
+      print(`The mermaid looks up and brightens.`);
+      print(`<span class="dialog">"Oh! You're awake at last. Listen — do you see the waterfall? Most people just see the water. But if you look at where it meets the rock... there is a space behind it. I found something there once. Something old and important. A key."</span>`, 'dialog');
+      print(`She glances toward the curtain of falling water, then back at you with a small, knowing smile.`);
+      print(`<span class="dialog">"The water's cold, but you won't melt."</span>`, 'dialog');
+      print(`And with that she slips beneath the surface and is gone.`);
+    }
+    return;
+  }
+
+  // wizard
+  if (['wizard','old wizard','man'].some(k => n.includes(k))) {
+    if (G.room !== 'overlook') { print("He's not here.", 'err'); return; }
+    if (G.mushrooms > 0 && !f('mapGiven')) {
+      // mushroom → hint
+      print(`The wizard opens one eye.`);
+      print(`<span class="dialog">"Ah. A mushroom. A fair price for a fair thought."</span>`, 'dialog');
+      print(`He takes it, studies it with great seriousness, and tucks it behind his ear.`);
+      G.mushrooms--;
+      const hint = HINTS[Math.min(G.wizHint, HINTS.length-1)];
+      G.wizHint++;
+      print(`<span class="dialog">"${hint}"</span>`, 'dialog');
+      print(`He closes his eyes. A small spiral of smoke rises from nowhere.`);
+    } else if (has('gold_coin') && !f('mapGiven')) {
+      print(`The wizard opens both eyes. He seems genuinely pleased.`);
+      print(`<span class="dialog">"Now that — that is interesting currency. Gold remembers where it has been."</span>`, 'dialog');
+      print(`He reaches into his robe and produces a folded piece of bark covered in cramped writing and tiny drawings.`);
+      print(`<span class="dialog">"The passages below are old and tangled. But not unknowable. Take this. Read it carefully — it speaks in feelings, not in arrows."</span>`, 'dialog');
+      rm('gold_coin');
+      add('basement_map');
+      sf('mapGiven');
+      print(`You receive: <span class="em">a basement map</span>.`);
+    } else if (G.mushrooms > 0) {
+      // mushroom → hint (even if map given)
+      print(`The wizard opens one eye.`);
+      print(`<span class="dialog">"Ah. A mushroom. A fair price for a fair thought."</span>`, 'dialog');
+      G.mushrooms--;
+      const hint = HINTS[Math.min(G.wizHint, HINTS.length-1)];
+      G.wizHint++;
+      print(`<span class="dialog">"${hint}"</span>`, 'dialog');
+      print(`He closes his eyes again.`);
+    } else {
+      print(`The wizard opens one eye.`);
+      print(`<span class="dialog">"I know a great many things. I will share them freely — but wisdom, little one, is not free. Bring me a mushroom from the forest and I will tell you what I know. Or bring me gold, and I will give you something more."</span>`, 'dialog');
+      print(`He closes his eyes. A slow curl of smoke rises from nowhere.`);
+    }
+    return;
+  }
+
+  // Woman of the Tree
+  if (['woman','cook','her','lady','mom','mother','tree'].some(k => n.includes(k))) {
+    if (G.room !== 'cooking_grotto') { print("She's not here.", 'err'); return; }
+    if (f('treatGiven')) {
+      print(`<span class="dialog">"The treat's already made, love. I hope it worked!"</span>`, 'dialog');
+      print(`She smiles and goes back to her pot.`);
+    } else if (f('momHasHoney') && f('hearthLit')) {
+      // give treat
+      print(`<span class="dialog">"Almost ready — just a moment..."</span>`, 'dialog');
+      print(`She stirs the pot once, twice, then ladles something green and good-smelling onto a leaf.`);
+      print(`<span class="dialog">"For the dog. She can't resist this. Just be gentle with her, alright?"</span>`, 'dialog');
+      add('green_treat');
+      sf('treatGiven');
+      print(`You receive: <span class="em">a green treat</span>.`);
+    } else if (f('momHasHoney') && !f('hearthLit')) {
+      print(`<span class="dialog">"I have the honey, but the fire is out. Could you light it for me? I cannot make anything without a flame."</span>`, 'dialog');
+      print(`She gestures at the cold hollow log.`);
+    } else if (f('hearthLit') && !f('momHasHoney')) {
+      print(`<span class="dialog">"The fire is going — lovely! But I am missing something golden and sweet. From a tree, perhaps?"</span>`, 'dialog');
+    } else {
+      print(`She looks up and smiles — the best kind of smile.`);
+      print(`<span class="dialog">"There you are! I would make you something very special — something green and very good — but I need honey, and my fire is out."</span>`, 'dialog');
+      print(`She glances at the cold hollow log.`);
+    }
+    return;
+  }
+
+  // unicorn
+  if (['unicorn','white','horse'].some(k => n.includes(k))) {
+    if (G.room !== 'songbird_nest') { print("The unicorn isn't here.", 'err'); return; }
+    print(`The unicorn regards you with calm blue eyes. She does not speak. She waits.`);
+    if (!f('unicornGifted')) print(`At her hooves, the dried blue flower catches your eye.`);
+    return;
+  }
+
+  // frog
+  if (['frog','toad'].some(k => n.includes(k))) {
+    const frogLoc = frogRoom();
+    if (frogLoc !== G.room) { print("There is no frog here.", 'err'); return; }
+    if (f('frogKissed')) { print(`The pool is still. Wherever the prince went, it was with a magnificent splash.`, 'sys'); return; }
+    if (G.frogIdx < FROG_PATH.length - 1) {
+      G.frogIdx++;
+      print(`The frog blinks once — slowly, deliberately — and launches off in a tremendous leap, vanishing before you can so much as say hello.`);
+      print(`You have a feeling you will find him again somewhere.`, 'sys');
+    } else {
+      print(`The frog on the lily pad holds very still.`);
+      print(`Something in the way he looks at you suggests he has been waiting a very long time.`);
+    }
+    return;
+  }
+
+  // sunny / dog
+  if (['sunny','dog','beast','animal'].some(k => n.includes(k))) {
+    if (G.room !== 'ravine') { print("She's not here.", 'err'); return; }
+    if (f('sunnyCalmed')) {
+      print(`Sunny opens one amber eye, thumps her curly tail twice, and closes it again.`);
+    } else {
+      print(`Sunny fixes you with a look of ancient, patient certainty. She does not growl. She does not need to.`);
+      print(`You get the sense that conversation is not really on the table right now.`);
+    }
+    return;
+  }
+
+  print(`You don't see anyone by that name here.`, 'err');
+}
+
+// ── Commands ───────────────────────────────────────────────────
+
+function cmdGo(dir) {
+  const room = ROOMS[G.room];
+  if (!room) return;
+  const exitVal = room.exits && room.exits[dir];
+  if (exitVal === undefined) {
+    // try partial match
+    const keys = Object.keys(room.exits || {});
+    const match = keys.find(k => k.startsWith(dir) || dir.startsWith(k));
+    if (match) { cmdGo(match); return; }
+    print("You can't go that way.", 'err'); return;
+  }
+  const dest = typeof exitVal === 'function' ? exitVal() : exitVal;
+  if (!dest) return; // blocked — exit fn already printed message
+  if (!ROOMS[dest]) { print(`(missing room: ${dest})`, 'err'); return; }
+  G.room = dest;
+  const destRoom = ROOMS[dest];
+  if (destRoom.onEnter) { destRoom.onEnter(); return; } // onEnter controls output for special rooms
+  printRoom();
+}
+
+function cmdLook(target) {
+  if (!target) { printRoom(); return; }
+  const t = target.toLowerCase().replace(/^(at|the|a|an)\s+/, '');
+
+  if (['telescope','scope'].some(k => t.includes(k))) {
+    if (G.room !== 'lookout_perch') { print("There's no telescope here.", 'err'); return; }
+    sf('seenBanner');
+    print(`You put your eye to the carved wooden telescope. The forest swims, then snaps into focus.`);
+    print(`Far below, on the highest wall of the fortress, a banner — faded but legible:`);
+    print(`<br><span class="em" style="font-size:1.35em; letter-spacing:0.18em">&nbsp;👂 AVSCULTA &nbsp;·&nbsp; ❤️ AMA &nbsp;·&nbsp; 🎓 DISCE&nbsp;</span><br>`);
+    print(`Three words. Three symbols. You feel like you ought to write them down.`);
+    return;
+  }
+
+  if (['bunny','ceramic','rabbit'].some(k => t.includes(k))) {
+    if (G.room !== 'bower') { print("There's no bunny here.", 'err'); return; }
+    print(`A small ceramic bunny, glazed white, sitting very upright with its paws folded. It has a seam around its middle, barely visible. It might ${f('bunnyOpen') ? 'already be open' : 'open'}.`);
+    return;
+  }
+
+  if (['hollow','tree','oak'].some(k => t.includes(k)) && G.room === 'old_garden') {
+    if (f('honeyTaken')) {
+      print(`The hollow is empty, the golden glow gone.`);
+    } else {
+      print(`A hollow in the old oak, just big enough to reach into. Inside: a small clay pot sealed with a leaf, filled with honey — warm and heavy and golden. The smell is wonderful.`);
+    }
+    return;
+  }
+
+  if (['banner','sign','words','inscription','avsculta'].some(k => t.includes(k))) {
+    if (f('seenBanner') || ['fortress_ground','fortress_l1','fortress_l2','fortress_l3'].includes(G.room)) {
+      print(`<span class="em">&nbsp;👂 AVSCULTA &nbsp;·&nbsp; ❤️ AMA &nbsp;·&nbsp; 🎓 DISCE&nbsp;</span>`);
+    } else {
+      print(`There's nothing like that here.`, 'err');
+    }
+    return;
+  }
+
+  if (t === 'map' || t === 'basement map') {
+    if (!has('basement_map')) { print("You don't have a map.", 'err'); return; }
+    cmdRead('map'); return;
+  }
+
+  if (['self','me','myself'].some(k => t === k)) {
+    print(`You are ${G.playerName || 'an adventurer'}.${has('tiny_crown') ? ` You wear a tiny golden crown. It suits you perfectly.` : ''}`);
+    cmdInventory(); return;
+  }
+
+  if (['pool','water','fish','falls','waterfall'].some(k => t.includes(k)) && G.room === 'grotto') {
+    print(`The pool is clear and deep, lit from within by blue-green light. Tiny silver fish dart below. The waterfall roars.`);
+    print(`Behind the curtain of falling water, the rock seems to go back further than it should.`);
+    return;
+  }
+
+  if (['flower','blue flower','flowers'].some(k => t.includes(k))) {
+    if (!f('flowerTaken') && G.room === 'bower') {
+      print(`Small blue flowers growing from the root-wall, fresh and fragrant. They smell faintly of honey.`);
+    } else if (has('blue_flower')) {
+      print(`A cluster of small blue flowers. Fresh, bright, smelling faintly of honey.`);
+    } else {
+      print(`You don't see those here.`, 'err');
+    }
+    return;
+  }
+
+  print(`You look carefully at the ${target} but find nothing more to say about it.`, 'sys');
+}
+
+function cmdTake(target) {
+  if (!target) { print("Take what?", 'err'); return; }
+  const t = target.toLowerCase().replace(/^(the|a|an)\s+/, '');
+
+  if (['mushroom','shroom','fungus'].some(k => t.includes(k))) {
+    if (MSPOT[G.room] === false) {
+      MSPOT[G.room] = true;
+      G.mushrooms++;
+      print(`You pick the mushroom carefully. It goes into your pocket. (${G.mushrooms} mushroom${G.mushrooms!==1?'s':''})`);
+    } else { print(`There's no mushroom to take here.`, 'err'); }
+    return;
+  }
+
+  if (['iron key','key','old key'].some(k => t.includes(k))) {
+    if (G.room !== 'behind_falls') { print("There's no key here.", 'err'); return; }
+    if (f('keyTaken')) { print("You already have the key.", 'err'); return; }
+    sf('keyTaken'); add('iron_key');
+    print(`You unwrap the leaf and take the iron key. It is cold, slightly green, and feels important.`);
+    return;
+  }
+
+  if (['torch'].some(k => t.includes(k))) {
+    if (G.room !== 'cave_mouth') { print("There's no torch here.", 'err'); return; }
+    if (has('torch') || has('torch_lit') || f('torchTaken')) { print("You already have the torch.", 'err'); return; }
+    sf('torchTaken'); add('torch');
+    print(`You unwrap the protective leaf and take the torch. It smells of pine resin, ready to be lit.`);
+    return;
+  }
+
+  if (['blue flower','flower','flowers'].some(k => t.includes(k))) {
+    if (G.room !== 'bower') { print("There are no blue flowers here.", 'err'); return; }
+    if (f('flowerTaken')) { print("You already took the flowers.", 'err'); return; }
+    sf('flowerTaken'); add('blue_flower');
+    print(`You pick the cluster of blue flowers from the root-crack. They smell of honey.`);
+    return;
+  }
+
+  if (['honey','pot','honey pot','clay pot'].some(k => t.includes(k))) {
+    if (G.room !== 'old_garden') { print("There's no honey here.", 'err'); return; }
+    if (f('honeyTaken')) { print("The hollow is already empty.", 'err'); return; }
+    sf('honeyTaken'); add('honey');
+    print(`You reach into the hollow and pull out a small clay pot sealed with a leaf. Warm, heavy, and golden. The smell is remarkable.`);
+    return;
+  }
+
+  if (['present','gift','box','package'].some(k => t.includes(k))) {
+    if (G.room !== 'tower_top') { print("There's no present here.", 'err'); return; }
+    print(`You pick it up. Your name is on the label, written in careful letters.`);
+    print(`It is lighter than you expected, and heavier. Both at once.`);
+    return;
+  }
+
+  print(`You can't take that.`, 'err');
+}
+
+function cmdOpen(target) {
+  if (!target) { print("Open what?", 'err'); return; }
+  const t = target.toLowerCase().replace(/^(the|a|an)\s+/, '');
+
+  if (['bunny','ceramic','rabbit'].some(k => t.includes(k))) {
+    if (G.room !== 'bower') { print("No bunny here.", 'err'); return; }
+    if (f('bunnyOpen')) {
+      print(`The bunny is already open. The flint and steel ${has('flint_steel') ? 'are in your pocket' : 'were inside'}.`);
+      return;
+    }
+    sf('bunnyOpen'); sf('flintTaken'); add('flint_steel');
+    print(`You twist the ceramic bunny gently along its seam. It opens.`);
+    print(`Inside, cold and smelling faintly of struck rock: <span class="em">flint and steel</span>.`);
+    return;
+  }
+
+  print(`You can't open that.`, 'err');
+}
+
+function cmdRead(target) {
+  if (!target) { print("Read what?", 'err'); return; }
+  const t = target.toLowerCase().replace(/^(the|a|an)\s+/, '');
+
+  if (['dictionary','book','dict'].some(k => t.includes(k))) {
+    if (G.room !== 'overlook' && !has('dictionary')) { print("There's no dictionary here.", 'err'); return; }
+    readDict(); return;
+  }
+
+  if (['map','basement map'].some(k => t.includes(k))) {
+    if (!has('basement_map')) { print("You don't have a map.", 'err'); return; }
+    print(`The wizard's map is drawn on bark in brown ink. Small, cramped notes fill the margins:`);
+    print(`<span class="em"><em>"Root Mouth: Stand still. Note the air. Follow what moves."</em></span>`);
+    print(`<span class="em"><em>"Where the dripping echoes loudest — that way leads nowhere. Go where it is quiet."</em></span>`);
+    print(`<span class="em"><em>"The earth remembers its tenants. Do not follow memory."</em></span>`);
+    print(`<span class="em"><em>"The bats know which way the sky is. You should too."</em></span>`);
+    print(`<span class="em"><em>"Follow the water. It knows where out is."</em></span>`);
+    print(`<span class="em"><em>"An old friend lives in the last chamber. She will show you the way if you call out to her."</em></span>`);
+    return;
+  }
+
+  if (['banner','sign','inscription'].some(k => t.includes(k))) {
+    cmdLook('banner'); return;
+  }
+
+  print(`Nothing here to read by that name.`, 'err');
+}
+
+function cmdLight(target) {
+  if (!target) { print("Light what?", 'err'); return; }
+  const t = target.toLowerCase().replace(/^(the|a|an)\s+/, '');
+
+  if (['torch'].some(k => t.includes(k))) {
+    if (!has('torch')) { print("You don't have a torch.", 'err'); return; }
+    if (has('torch_lit')) { print("The torch is already lit.", 'err'); return; }
+    if (!has('flint_steel')) { print("You need something to light it with. Flint and steel, perhaps?", 'err'); return; }
+    rm('torch'); add('torch_lit');
+    print(`You strike the flint and steel together. Sparks catch. The torch flares to life, warm and bright. The shadows pull back.`);
+    return;
+  }
+
+  if (['fire','hearth','log','fireplace','flame'].some(k => t.includes(k))) {
+    if (G.room !== 'cooking_grotto') { print("There's no hearth here.", 'err'); return; }
+    if (f('hearthLit')) { print("The fire is already burning.", 'err'); return; }
+    if (!has('flint_steel')) { print("You need something to light it with. Flint and steel, perhaps?", 'err'); return; }
+    sf('hearthLit');
+    print(`You crouch at the hollow log and strike the flint and steel together. After a few tries, the kindling catches.`);
+    print(`The fire blooms upward, warm and golden. The whole grotto brightens.`);
+    print(`The Woman of the Tree turns and smiles — warm and wide. <span class="dialog">"Oh, wonderful. Now we're cooking."</span>`);
+    // auto-complete treat if honey already given
+    if (f('momHasHoney') && !f('treatGiven')) {
+      setTimeout(() => {
+        print(`She adds the honey to the pot and stirs. After a little while:`);
+        print(`<span class="dialog">"Here you are. For the dog. She can't resist it."</span>`, 'dialog');
+        add('green_treat'); sf('treatGiven');
+        print(`You receive: <span class="em">a green treat</span>.`);
+      }, 600);
+    }
+    return;
+  }
+
+  print(`You can't light that.`, 'err');
+}
+
+function cmdGive(itemStr, targetStr) {
+  if (!itemStr || !targetStr) { print("Give what to whom?", 'err'); return; }
+  const item = itemStr.toLowerCase();
+  const tgt  = targetStr.toLowerCase();
+
+  // blue flower → unicorn
+  if (['flower','blue flower','flowers'].some(k => item.includes(k)) &&
+      ['unicorn','white','horse'].some(k => tgt.includes(k))) {
+    if (!has('blue_flower')) { print("You don't have any blue flowers.", 'err'); return; }
+    if (G.room !== 'songbird_nest') { print("The unicorn isn't here.", 'err'); return; }
+    if (f('unicornGifted')) { print("You've already given her the flowers.", 'err'); return; }
+    rm('blue_flower'); sf('unicornGifted'); add('gold_coin');
+    print(`You hold out the blue flowers.`);
+    print(`The unicorn steps forward and breathes them in. Something unlocks behind her eyes — warm, relieved, like someone who has waited a long time.`);
+    print(`She dips her head. Her horn grazes the air near your hand, and something falls into your palm: a <span class="em">gold coin</span>, old and warm.`);
+    print(`She steps back. She still doesn't speak. She doesn't need to.`);
+    return;
+  }
+
+  // honey → Woman of the Tree
+  if (['honey','pot','clay'].some(k => item.includes(k)) &&
+      ['woman','cook','mom','mother','her','lady','tree'].some(k => tgt.includes(k))) {
+    if (!has('honey')) { print("You don't have any honey.", 'err'); return; }
+    if (G.room !== 'cooking_grotto') { print("She's not here.", 'err'); return; }
+    if (f('momHasHoney')) { print("You already gave her the honey.", 'err'); return; }
+    rm('honey'); sf('momHasHoney');
+    print(`You hand over the clay pot of honey.`);
+    print(`<span class="dialog">"Oh, this is perfect! Exactly what I needed."</span>`, 'dialog');
+    if (f('hearthLit')) {
+      print(`She begins adding it to the pot immediately.`);
+      setTimeout(() => {
+        print(`She stirs, hums, and ladles out a small portion onto a large leaf.`);
+        print(`<span class="dialog">"Here you are. For the dog. She can't resist this."</span>`, 'dialog');
+        add('green_treat'); sf('treatGiven');
+        print(`You receive: <span class="em">a green treat</span>.`);
+      }, 500);
+    } else {
+      print(`<span class="dialog">"Now I just need that fire lit and we'll be in business."</span>`, 'dialog');
+    }
+    return;
+  }
+
+  // green treat → Sunny
+  if (['treat','green treat','green'].some(k => item.includes(k)) &&
+      ['sunny','dog','beast','animal'].some(k => tgt.includes(k))) {
+    if (!has('green_treat')) { print("You don't have a treat.", 'err'); return; }
+    if (G.room !== 'ravine') { print("Sunny isn't here.", 'err'); return; }
+    if (f('sunnyCalmed')) { print("Sunny is already happy.", 'err'); return; }
+    rm('green_treat'); sf('sunnyCalmed');
+    print(`You crouch down and hold out the green treat.`);
+    print(`Sunny's nose twitches. Both amber eyes fix on it with sudden, total attention.`);
+    print(`She leans forward — enormous, careful, solemn — and takes it from your hand with surprising delicacy.`);
+    print(`Then she chews twice, stands up, and walks to the side of the bridge with great dignity, as though this was her plan all along.`);
+    print(`The bridge is clear.`);
+    return;
+  }
+
+  // mushroom / coin → wizard (redirect to talk)
+  if (['mushroom','shroom','coin','gold'].some(k => item.includes(k)) &&
+      ['wizard','old','man'].some(k => tgt.includes(k))) {
+    talkTo('wizard'); return;
+  }
+
+  print(`Nothing happens.`, 'err');
+}
+
+function cmdUse(itemStr, targetStr) {
+  if (!itemStr) { print("Use what?", 'err'); return; }
+  const item = itemStr.toLowerCase();
+  const tgt  = (targetStr || '').toLowerCase();
+
+  // iron key on door
+  if (['key','iron key'].some(k => item.includes(k))) {
+    if (G.room !== 'fox_warren') { print("There's nothing to use the key on here.", 'err'); return; }
+    if (f('keyUsed')) { print("The door is already unlocked.", 'err'); return; }
+    if (!has('iron_key')) { print("You don't have the key.", 'err'); return; }
+    sf('keyUsed'); rm('iron_key');
+    print(`You slide the iron key into the old keyhole. It turns with a satisfying clunk. The door swings open, releasing garden-scented air.`);
+    print(`To the <b>south</b>, the old garden.`);
+    return;
+  }
+
+  // flint and steel
+  if (['flint','steel','flint and steel'].some(k => item.includes(k))) {
+    if (tgt.includes('torch')) { cmdLight('torch'); return; }
+    if (['fire','hearth','log'].some(k => tgt.includes(k))) { cmdLight('fire'); return; }
+    if (has('torch') && !has('torch_lit')) { cmdLight('torch'); return; }
+    if (G.room === 'cooking_grotto' && !f('hearthLit')) { cmdLight('fire'); return; }
+    print(`You strike sparks, but there's nothing here to light.`, 'err');
+    return;
+  }
+
+  // torch
+  if (['torch','lit torch'].some(k => item.includes(k))) {
+    if (!has('torch_lit')) { print("Your torch isn't lit.", 'err'); return; }
+    if (G.room === 'cooking_grotto' && !f('hearthLit')) { cmdLight('fire'); return; }
+    print(`The torch lights your way. That is its main job right now.`, 'sys');
+    return;
+  }
+
+  // telescope
+  if (['telescope','scope'].some(k => item.includes(k))) { cmdLook('telescope'); return; }
+
+  print(`Nothing happens.`, 'err');
+}
+
+function cmdKiss(target) {
+  if (!target) { print("Kiss whom?", 'err'); return; }
+  const t = target.toLowerCase();
+  if (!['frog','toad'].some(k => t.includes(k))) { print("You don't kiss that.", 'err'); return; }
+
+  const frogLoc = frogRoom();
+  if (frogLoc !== G.room) { print("The frog isn't here.", 'err'); return; }
+  if (f('frogKissed')) { print("You've already done this. The result was a prince.", 'sys'); return; }
+
+  if (G.frogIdx < FROG_PATH.length - 1) {
+    G.frogIdx++;
+    print(`You lean toward the frog. He blinks — once — and launches off in a tremendous leap, vanishing before you can reach him.`);
+    return;
+  }
+
+  // final kiss
+  sf('frogKissed'); add('tiny_crown');
+  print(`The frog on the lily pad holds very still.`);
+  print(`You lean down and kiss him gently on the cheek.`);
+  print(`There is a sound like a bell and a ripple like a stone dropped in still water.`);
+  print(`For one extraordinary second, a small prince stands in the pool — soaking wet, blinking, wearing an expression of immense dignity.`);
+  print(`He bows. He winks. He says: <span class="dialog">"I owe you one."</span>`);
+  print(`Then he leaps back into the pool with a tremendous <em>SPLASH</em>, and is gone.`);
+  print(`Something bobs to the surface: a tiny, perfect golden crown. You reach in and take it.`);
+  print(`<span class="sys">(You now carry: a tiny golden crown. It fits perfectly — not on your head, exactly, but somewhere nearby.)</span>`);
+}
+
+function cmdSay(words) {
+  if (!words) { print("Say what?", 'err'); return; }
+  const w = words.toLowerCase().trim();
+
+  if (G.room === 'fortress_l1' && !f('towerL1')) {
+    if (w === 'listen' || w === 'avsculta') {
+      sf('towerL1');
+      print(`"<em>LISTEN.</em>"`);
+      print(`Your voice fills the chamber. The roots tremble. Then, slowly, they begin to loosen — curling back from the stairway like fingers uncurling from a fist.`);
+      print(`The way <b>up</b> is open.`);
+      return;
+    }
+  }
+  if (G.room === 'fortress_l2' && !f('towerL2')) {
+    if (w === 'love' || w === 'ama') {
+      sf('towerL2');
+      print(`"<em>LOVE.</em>"`);
+      print(`The amber light hums, brightens once — and then softens, pulling back like a curtain drawn aside.`);
+      print(`The way <b>up</b> is open.`);
+      return;
+    }
+  }
+  if (G.room === 'fortress_l3' && !f('towerL3')) {
+    if (w === 'learn' || w === 'disce') {
+      sf('towerL3');
+      print(`"<em>LEARN.</em>"`);
+      print(`A pause. Then the stone over the hatch shifts — slow and deliberate — and slides to one side. Light pours down.`);
+      print(`The way <b>up</b> is open.`);
+      return;
+    }
+  }
+
+  if (G.room === 'riddle_junction') {
+    if (!G.echoHeard) {
+      G.echoHeard = true;
+      print(`You call out: "<em>${words}</em>"`);
+      print(`The chamber is still for a moment.`);
+      print(`Then, from the <b>east</b> passage: "<em>${words}... ${words}...</em>"`);
+      print(`From the other passage: nothing. Silence.`);
+      print(`The echo lives to the east.`);
+    } else {
+      print(`You call out: "<em>${words}</em>"`);
+      print(`The east passage answers: "<em>${words}... ${words}...</em>"`);
+    }
+    return;
+  }
+
+  print(`"${words}." Your voice echoes softly. Nothing responds.`, 'sys');
+}
+
+function cmdInventory() {
+  const lines = [];
+  if (has('iron_key'))      lines.push('a small iron key (old, green with age)');
+  if (has('flint_steel'))   lines.push('flint and steel');
+  if (has('blue_flower'))   lines.push('a cluster of blue flowers');
+  if (has('gold_coin'))     lines.push('a gold coin');
+  if (has('basement_map'))  lines.push('a basement map (bark, cramped writing)');
+  if (has('torch'))         lines.push('a torch (unlit)');
+  if (has('torch_lit'))     lines.push('🔥 a lit torch');
+  if (has('honey'))         lines.push('a clay pot of honey');
+  if (has('green_treat'))   lines.push('a green treat');
+  if (has('tiny_crown'))    lines.push('✨ a tiny golden crown');
+  if (G.mushrooms > 0)      lines.push(`${G.mushrooms} mushroom${G.mushrooms!==1?'s':''}`);
+
+  if (lines.length === 0) {
+    print(`Your pockets are empty.`, 'sys');
+  } else {
+    print(`You are carrying:`);
+    lines.forEach(l => print(`&nbsp;&nbsp;· ${l}`));
+  }
+}
+
+function cmdHelp() {
+  print(`<span class="sys">Things you can do:</span>`);
+  [
+    ['go [direction]', 'north / south / east / west / up / down (or n/s/e/w/u/d)'],
+    ['look [thing]',   'look around, or examine something'],
+    ['take [thing]',   'pick something up'],
+    ['talk to [name]', 'speak with someone'],
+    ['give [thing] to [name]', 'hand something over'],
+    ['use [thing] on [target]','use an item'],
+    ['open [thing]',   'open something'],
+    ['read [thing]',   'read something'],
+    ['light [thing]',  'light something on fire'],
+    ['say [word]',     'speak something aloud — some places are listening'],
+    ['kiss [name]',    'for a very specific situation'],
+    ['inventory / i',  'see what you\'re carrying'],
+  ].forEach(([cmd, note]) =>
+    print(`&nbsp;&nbsp;<b>${cmd}</b> &nbsp;— ${note}`));
+}
+
+// ── Parser ─────────────────────────────────────────────────────
+
+const DIR_MAP = {
+  n:'north', s:'south', e:'east', w:'west', u:'up', d:'down',
+  ne:'northeast', nw:'northwest', se:'southeast', sw:'southwest',
+  'behind':'behind', 'further':'further', 'out':'out', 'back':'back',
+  'closet':'closet', 'bridge':'bridge', 'cross':'cross', 'cave':'cave',
+  'fast':'fast travel',
+};
+
+function parse(raw) {
+  if (G.namePrompt) {
+    const name = raw.trim();
+    if (!name) { print("(Please enter your name to begin.)", 'sys'); return; }
+    G.playerName = name.charAt(0).toUpperCase() + name.slice(1);
+    G.namePrompt = false;
+    print(`<br>Welcome, <span class="em">${G.playerName}</span>.<br>`, 'sys');
+    setTimeout(() => {
+      print(`You open your eyes.`);
+      print(`The first thing you notice is the <em>wind</em>.`);
+      print(``);
+      setTimeout(() => {
+        G.room = 'high_bough';
+        printRoom();
+      }, 400);
+    }, 300);
+    return;
+  }
+
+  const input = raw.toLowerCase().trim();
+  if (!input) return;
+
+  print(`<span class="echo">&gt; ${raw}</span>`);
+
+  const words = input.split(/\s+/);
+  const verb  = words[0];
+  const rest  = words.slice(1).join(' ');
+
+  // bare direction
+  if (DIR_MAP[verb] !== undefined && words.length === 1) {
+    cmdGo(DIR_MAP[verb] || verb); return;
+  }
+  // also handle multi-word direction alone (ne, nw etc already handled)
+
+  switch (verb) {
+    case 'go': case 'move': case 'walk': case 'travel':
+    case 'head': case 'enter': case 'climb': case 'cross': case 'descend':
+      cmdGo(DIR_MAP[rest] || rest); return;
+
+    case 'look': case 'l': case 'examine': case 'x':
+    case 'inspect': case 'check': case 'describe': case 'study':
+      cmdLook(rest || null); return;
+
+    case 'take': case 'get': case 'grab': case 'pick': case 'collect':
+      cmdTake(rest.replace(/^up\s+/,'').replace(/\s+up$/,'')); return;
+
+    case 'drop': case 'leave':
+      print(`You hang onto everything for now.`, 'sys'); return;
+
+    case 'inventory': case 'i': case 'inv': case 'items': case 'pockets': case 'bag':
+      cmdInventory(); return;
+
+    case 'talk': case 'speak': case 'greet': case 'ask': case 'chat': {
+      const t = rest.replace(/^(to|with|the|a|an)\s+/,'');
+      talkTo(t); return;
+    }
+
+    case 'give': {
+      const toMatch = rest.match(/^(.+?)\s+to\s+(.+)$/);
+      if (toMatch) { cmdGive(toMatch[1].trim(), toMatch[2].trim()); }
+      else { const p = rest.split(' '); cmdGive(p.slice(1).join(' '), p[0]); }
+      return;
+    }
+
+    case 'use': case 'apply': {
+      const onMatch = rest.match(/^(.+?)\s+on\s+(.+)$/);
+      if (onMatch) cmdUse(onMatch[1].trim(), onMatch[2].trim());
+      else cmdUse(rest, '');
+      return;
+    }
+
+    case 'open': case 'pry': case 'crack':
+      cmdOpen(rest.replace(/^(the|a|an)\s+/,'')); return;
+
+    case 'read':
+      cmdRead(rest.replace(/^(the|a|an)\s+/,'')); return;
+
+    case 'light': case 'ignite': case 'kindle': case 'spark': case 'start': {
+      const withMatch = rest.match(/^(.+?)\s+with\s+(.+)$/);
+      cmdLight(withMatch ? withMatch[1].trim() : rest);
+      return;
+    }
+
+    case 'kiss': case 'smooch':
+      cmdKiss(rest.replace(/^(the|a|an)\s+/,'')); return;
+
+    case 'say': case 'shout': case 'yell': case 'call': case 'whisper':
+    case 'utter': case 'speak': case 'cry': case 'announce':
+      cmdSay(rest); return;
+
+    case 'smell': case 'sniff':
+      print(`You sniff the air. The forest breathes in many languages.`, 'sys'); return;
+
+    case 'listen':
+      if (G.room === 'riddle_junction') {
+        print(`You listen. From the east passage — the faintest trace of an echo. Go east.`, 'sys');
+      } else {
+        print(`You listen. The forest breathes. Something, somewhere, is always moving.`, 'sys');
+      }
+      return;
+
+    case 'feel': case 'touch':
+      print(`You reach out. The forest is very real.`, 'sys'); return;
+
+    case 'wait': case 'z': case 'rest': case 'sit':
+      print(`Time passes. The forest doesn't mind.`, 'sys'); return;
+
+    case 'help': case '?': case 'hints': case 'commands':
+      cmdHelp(); return;
+
+    case 'again': case 'g':
+      print(`(Try typing what you'd like to do.)`, 'sys'); return;
+
+    default:
+      // try bare NPC name as "talk to X"
+      if (['mermaid','wizard','unicorn','frog','sunny','dog','woman','cook','mom','tree'].some(k => verb.includes(k))) {
+        talkTo(input); return;
+      }
+      print(`<span class="err">You try to "${raw}" but nothing happens.</span> <span class="sys">(Type <b>help</b> for a list of things you can do.)</span>`);
+  }
+}
+
+// ── Output ─────────────────────────────────────────────────────
+const outputEl = document.getElementById('output');
+
+function print(html, cls) {
+  const p = document.createElement('p');
+  if (cls) p.className = cls;
+  p.innerHTML = (html === '' || html === undefined) ? '&nbsp;' : html;
+  outputEl.appendChild(p);
+  outputEl.scrollTop = outputEl.scrollHeight;
+}
+
+function printRoom() {
+  const room = ROOMS[G.room];
+  if (!room) return;
+  print(`<span class="room-title">${room.name}</span>`);
+  print(``);
+  const desc = room.desc ? room.desc() : '';
+  desc.split(/\n\n+/).forEach(para => { if (para.trim()) print(para.trim()); });
+  print(`<span class="sep">─────────────────────────────────────</span>`);
+}
+
+// ── Input ──────────────────────────────────────────────────────
+const cmdEl = document.getElementById('cmd');
+cmdEl.addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') {
+    const val = this.value.trim();
+    this.value = '';
+    if (val) parse(val);
+  }
+});
+
+// ── Start ──────────────────────────────────────────────────────
+window.addEventListener('load', () => {
+  print(`<span class="win" style="font-size:1.5em; letter-spacing:0.08em">✦ &nbsp; THE GREAT TREE &nbsp; ✦</span>`);
+  print(``);
+  print(`<em>A birthday adventure</em>`);
+  print(``);
+  print(`Before we begin —`);
+  print(`What is your name?`);
+  cmdEl.focus();
+});
+</script>
+</body>
+</html>
