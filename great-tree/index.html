@@ -1603,19 +1603,99 @@ function cmdSmell(t) {
   if (t.includes('honey')) { print(`Rich and golden and impossible to resist.`); return; }
   if (t.includes('torch')) { print(`Pine resin, sharp and clean.`); return; }
   const smells = {
-    grotto:       `Cool and misty, smelling of water and stone and something ancient.`,
-    behind_falls: `Wet rock and cold water. Something very old.`,
-    bower:        `Pressed flowers, old wood, and a sweetness that might be honey.`,
-    songbird_nest:`Blue flowers, cedar, and something faintly like rain.`,
-    cooking_grotto: f('hearthLit') ? `Woodsmoke, blackberries, honey, and something spiced.` : `Damp stone and dried herbs and the ghost of old meals.`,
-    old_garden:   `Wildflowers, moss, and — from the hollow tree — the rich sweetness of honey.`,
-    fungi_nook:   `Something electric and underground, like the moment before rain.`,
-    blind_grotto: `Dripping water, wet stone, and a faint sweetness from the mushroom.`,
-    bat_roost:    `Dusty and earthy and faintly musky — many small sleeping things.`,
-    fox_warren:   `Dry leaves and autumn and something wild.`,
-    root_tunnel:  `Damp earth and, faintly, something cooking.`,
+    high_bough:      `Fresh leaves and morning air, and the faintest trace of flowers from the vines above. The high-up smell of the world.`,
+    elise_closet:    `Cedar and old bark and something warm and familiar — like a favourite blanket folded away safely.`,
+    canopy_walk:     `Green and alive — wind carrying pollen and pine from very far away.`,
+    great_hollow:    `Old bark, cold stone, and something ancient — like the inside of a very old book left in the rain.`,
+    mossy_chamber:   `Damp moss, cold water, and soil so deep it has almost no smell at all. Still and very old.`,
+    overlook:        `Pine resin, dried flowers, and something faintly sweet — incense, perhaps, or old magic kept in one place too long.`,
+    lookout_perch:   `Open sky and pine needles warming in the sun. Somewhere far below, the freshness of water.`,
+    bark_nook:       !MSPOT.bark_nook ? `Old leaves, dry wood, and a faint purple sweetness from the mushroom in the corner.` : `Old leaves and dry wood and the quiet smell of a forgotten place.`,
+    grotto:          `Cool and misty, smelling of water and stone and something ancient.`,
+    behind_falls:    `Wet rock and cold water. Something very old.`,
+    root_chamber:    `Deep earth and living roots, and the clean cold smell of stone from far below.`,
+    clearing:        `Sunlight on warm grass, wildflowers, and pine needles. Open and unhurried.`,
+    road:            `Dry pine dust and open sky, and the distant hint of smoke from somewhere far off.`,
+    bower:           `Pressed flowers, old wood, and a sweetness that might be honey.`,
+    mushroom_ring:   `Something earthy and electric — like a storm trapped underground. Each mushroom carries its own note: amber, violet, sea-green, rose.`,
+    fox_warren:      `Dry leaves and autumn and something wild.`,
+    root_tunnel:     `Damp earth and, faintly, something cooking.`,
+    fungi_nook:      `Something electric and underground, like the moment before rain.`,
+    cooking_grotto:  f('hearthLit') ? `Woodsmoke, blackberries, honey, and something spiced.` : `Damp stone and dried herbs and the ghost of old meals.`,
+    stream_cave:     `Cold water and wet stone and the mineral sharpness of deep rock. The stream makes the whole cave smell alive.`,
+    cave_mouth:      `The first breath of outside — pine resin, animal dust, and open air trying to come in.`,
+    old_garden:      `Wildflowers, moss, and — from the hollow tree — the rich sweetness of honey.`,
+    ravine:          `Stone, cold water, and dog — big and warm and slightly damp.`,
+    cave_down:       `Damp earth and tree roots giving way to cold stone. Something older below.`,
+    dripping_hall:   `Wet stone and mineral water, sharpening as you face west.`,
+    dripping_passage:`The smell of water everywhere — cold mist and damp rock, like standing just behind a waterfall.`,
+    blind_grotto:    `Dripping water, cold mist, and a faint sweetness from the mushroom. The waterfall wall fills everything.`,
+    fox_chamber:     `Fox and earth and warmth — a deeply lived-in place, heavy with old animal memory.`,
+    fox_tunnel:      `Overwhelming fox — musk and warm earth and generations of old dens pressed into the walls.`,
+    old_den:         `Fox and old bone and settled dust. Very lived in. Very old. Very still.`,
+    bat_roost:       `Dusty and earthy and faintly musky — many small sleeping things.`,
+    stream_junction: `Cold water rushing over mineral stone. Clean and sharp — the smell of somewhere open, not far ahead.`,
+    narrow_rill:     `The stream, thinned to almost nothing — cold and clear, with a faint edge of deep stone.`,
+    stream_head:     `Stone and the faintest breath of cold, clean water seeping up through rock.`,
+    riddle_junction: `Cold still air, older than the rest of the caverns. Nothing alive. Nothing recent.`,
+    east_cave_mouth: `A sudden rush of pine and open air — the outside world breaking through after all that stone.`,
+    fortress_ground: `Cold stone and old mortar, vine flowers blooming through the cracks. Something ancient and proud.`,
+    fortress_l1:     `Stone and stillness — the smell of a room that has been waiting a very long time.`,
+    fortress_l2:     `Faintly warm, with something like beeswax or amber — an old sweetness, not quite present.`,
+    fortress_l3:     `Cold wind from the arrow-slits, and old paper, old ink — the smell of things written down and kept.`,
+    tower_top:       `Nothing but sky and pine and wind. The cleanest air you have ever breathed.`,
+    songbird_nest:   `Blue flowers, cedar, and something faintly like rain.`,
   };
   print(smells[G.room] || `The forest breathes in a hundred directions. Each one is interesting.`, 'sys');
+}
+
+// Context-aware listen
+function cmdListen() {
+  if (G.room === 'fortress_l1' && !f('towerL1')) { cmdSay('listen'); return; }
+  const sounds = {
+    high_bough:      `Wind through the highest branches, and birdsong so close you could almost touch it. The great tree creaks — slowly, enormously, like a breath.`,
+    elise_closet:    `The forest, muffled by bark. Almost perfectly quiet. Very safe-feeling.`,
+    canopy_walk:     `Wind and birdsong and the creak of branches. The vine bridges sway and whisper. Far below, something rushes — water.`,
+    great_hollow:    `A deep, slow resonance — the tree humming to itself. Very old. Very slow.`,
+    mossy_chamber:   `Almost nothing. A distant drip. Your own heartbeat, surprisingly loud in the quiet.`,
+    overlook:        `Crystal wind-chimes tinkling in patterns that are almost music. The faint scratch of a quill on bark.`,
+    lookout_perch:   `Open wind, and far below, the sound of water. Birds calling somewhere. The vast quiet of height.`,
+    bark_nook:       `The canopy walk, muffled. Somewhere above in the bark, the small scratch of tiny claws.`,
+    grotto:          `The waterfall fills everything — a constant rush that becomes its own kind of silence. Under it, barely audible: someone humming.`,
+    behind_falls:    `The waterfall is deafening here — a roar that fills your whole chest. Nothing else can reach you through it.`,
+    root_chamber:    `Roots settling. Underground water, somewhere deep. A long creak from high above in the tree. The whole forest, conducting itself.`,
+    clearing:        `Insects, birdsong, wind through pine needles. Somewhere to the north, the distant sound of a road.`,
+    road:            `Wind along open ground. The forest sounds different from here — further away, like it's watching.`,
+    bower:           `Very quiet. Moss and pressed flowers absorb almost every sound. Almost. Something very small moves in the ceiling.`,
+    mushroom_ring:   `A low, deep thrum from the mushrooms — more felt than heard, like a very large instrument playing a very low note.`,
+    fox_warren:      `Scratching, somewhere in the walls. Small. Not dangerous. Something that lives here and knows it.`,
+    root_tunnel:     `Dripping, the far-off sounds of cooking, and the deep settle of roots somewhere overhead.`,
+    fungi_nook:      `The colored mushrooms hum — each at a slightly different pitch. Together, almost a chord.`,
+    cooking_grotto:  f('hearthLit') ? `The crackle and pop of the fire. The steady bubble of the pot. Her spoon against the clay. Soft humming.` : `The stream, distant. Her stirring, quiet in a cold pot. Wind somewhere above.`,
+    stream_cave:     `The stream — loud and constant, cold water over smooth stone. It fills everything else out.`,
+    cave_mouth:      `Two sounds at once: the forest alive and moving outside, and below you, the deep listening silence of earth.`,
+    old_garden:      `Bees, purposeful and numerous. Wind through brambles. Somewhere inside the ivy, something small and quick.`,
+    ravine:          `Sunny's slow, immovable breathing. The creak of the bridge above the water. Wind in the ravine walls.`,
+    cave_down:       `The sound changes here. Below: almost nothing. Above: the forest, retreating to a murmur.`,
+    dripping_hall:   `From the west: drip, drip, drip — steady as a clock. From the east: quiet, almost entirely.`,
+    dripping_passage:`The dripping is close and loud now, a steady rhythm against wet walls. Your footsteps echo oddly.`,
+    blind_grotto:    `The waterfall fills the whole space — continuous and total. You can't hear anything else, including yourself think.`,
+    fox_chamber:     `The remembered sound of foxes — scratch and settle, scratch and settle. Nothing moving now, but the echo remains in the earth.`,
+    fox_tunnel:      `Just your own breathing, magnified by the close walls.`,
+    old_den:         `Perfect silence. The deep kind. You are very far underground and very well hidden.`,
+    bat_roost:       `A soft papery breathing — hundreds of small chests, rising and falling. The occasional squeak, almost too high to hear.`,
+    stream_junction: `The stream runs steadily east. From the north, it's quieter. From the east, it grows.`,
+    narrow_rill:     `A trickle, barely. Getting quieter the further north you go — not what you would expect.`,
+    stream_head:     `The faintest seep and bubble of water coming up through rock. The deepest quiet in all the caverns.`,
+    riddle_junction: `Two passages. From the <b>east</b>, a faint echo comes back — your own breathing, returning to you. The west passage gives back nothing.`,
+    east_cave_mouth: `Open air and the ravine above — wind, water, the creak of the bridge. After the caverns, almost overwhelming.`,
+    fortress_ground: `Wind through broken battlements. Far above, something snaps in the breeze — a flag, or an old banner.`,
+    fortress_l1:     `Absolute silence. The kind that means the room is waiting. Something here is paying close attention.`,
+    fortress_l2:     `A faint hum from the amber light — felt more in your chest than heard in your ears.`,
+    fortress_l3:     `Wind through the arrow-slits. Otherwise: the heavy silence of stone that has held its breath for centuries.`,
+    tower_top:       `Everything at once — wind, birds, water, the tree, the whole forest below. All of it, finally, together.`,
+  };
+  print(sounds[G.room] || `You listen. The forest breathes. Something, somewhere, is always moving.`, 'sys');
 }
 
 // Smart fallback — never say "I don't know what X is"
@@ -1881,17 +1961,7 @@ function parse(raw) {
   }
 
   // LISTEN
-  if (verb === 'listen') {
-    if (G.room === 'riddle_junction') {
-      print(`You press close to each passage and listen. From the <b>east</b>, the faintest trace of an echo — your own breathing, returning to you. The other passage gives back nothing.`, 'sys');
-    } else if (G.room === 'fortress_l1') {
-      // "listen" in the tower level 1 room — try it as the magic word
-      cmdSay('listen');
-    } else {
-      print(`You listen. The forest breathes. Something, somewhere, is always moving.`, 'sys');
-    }
-    return;
-  }
+  if (verb === 'listen') { cmdListen(); return; }
 
   // FEEL / TOUCH / PET / STROKE
   if (['feel','touch','pat','stroke','rub','pet','scratch','poke','caress'].includes(verb)) {
