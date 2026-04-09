@@ -106,6 +106,7 @@ const G = {
   basementUnlocked: false,
   echoHeard: false,
   namePrompt: true,
+  wizAggro: 0,       // 0=fine, 1=warned once, 2=warned twice, 3=newt
 };
 
 // ── Save / load ────────────────────────────────────────────────
@@ -1033,6 +1034,31 @@ function cmdLook(target) {
     return;
   }
 
+  // Bower decorative items
+  if (['acorn','crystal acorn'].some(k => t.includes(k)) && G.room === 'bower') {
+    print(`A perfect acorn, carved from clear crystal. Light passes through it and comes out the other side as tiny rainbows on the shelf.`); return;
+  }
+  if (['golden leaf','gold leaf','leaf'].some(k => t.includes(k)) && G.room === 'bower') {
+    print(`A single leaf preserved in what looks like gold — every vein perfect, every edge sharp. When you touch it, it doesn't rattle. It rings, very faintly, like a small bell.`); return;
+  }
+  if (['bottle','ship','tiny ship'].some(k => t.includes(k)) && G.room === 'bower') {
+    print(`A glass bottle sealed with old wax. Inside, a tiny ship — tiny rigging, tiny ropes, a tiny flag no bigger than a fingernail. There is no seam in the glass. There is no way to explain how it got in there.`); return;
+  }
+
+  // Overlook decorative items
+  if (['scroll','scrolls','bark scroll','writing'].some(k => t.includes(k)) && G.room === 'overlook') {
+    print(`The bark-scrolls are covered in writing so small and cramped you can barely make out individual letters. It seems to be in at least three different languages. Some of it might be a recipe.`); return;
+  }
+  if (['stone','stones','rock','rocks','pebble'].some(k => t.includes(k)) && G.room === 'overlook') {
+    print(`A collection of interesting stones: one perfectly round, one perfectly flat, one warm to the touch for no reason, and one cold for the same reason. Arranged in order of some quality you can't quite identify.`); return;
+  }
+  if (['figure','figures','carving','carvings','carved'].some(k => t.includes(k)) && G.room === 'overlook') {
+    print(`Small carved figures of animals — a fox, a bat, a frog, a unicorn — each no bigger than your thumb. They are arranged facing each other in a circle. Somehow this feels important.`); return;
+  }
+  if (['dried flower','dried flowers'].some(k => t.includes(k)) && G.room === 'overlook') {
+    print(`Bundles of dried flowers in many colours, each tied with a different coloured thread. Each bundle seems to be a different combination, as if someone has been experimenting for a very long time.`); return;
+  }
+
   // Bunny
   if (['bunny','ceramic','rabbit','figurine','statue'].some(k => t.includes(k))) {
     if (G.room !== 'bower') { print(`There's no ceramic bunny here.`, 'sys'); return; }
@@ -1150,6 +1176,21 @@ function cmdLook(target) {
 function cmdTake(target) {
   if (!target) { print("Take what?", 'err'); return; }
   const t = target.toLowerCase().replace(/^(the|a|an)\s+/, '');
+
+  // Bower decorative items — beautiful but not yours to take
+  if (G.room === 'bower' && ['acorn','crystal acorn','golden leaf','gold leaf','leaf','bottle','ship','tiny ship'].some(k => t.includes(k))) {
+    print(`It's beautiful, but it feels like it belongs here. You leave it where it is.`, 'sys'); return;
+  }
+
+  // Overlook — wizard's possessions
+  if (G.room === 'overlook') {
+    if (['dictionary','book'].some(k => t.includes(k))) {
+      print(`You try to lift the dictionary. It doesn't move. It is extraordinarily heavy — heavier than a book has any right to be. Perhaps some things are meant to stay where they are.`, 'sys'); return;
+    }
+    if (['scroll','scrolls','stone','stones','rock','figure','figures','carving','dried flower','dried flowers','crystal','crystals'].some(k => t.includes(k))) {
+      aggravateWizard(); return;
+    }
+  }
 
   if (['mushroom','shroom','fungus'].some(k => t.includes(k))) {
     if (MSPOT[G.room] === false) {
@@ -1526,6 +1567,32 @@ function cmdInventory() {
   }
 }
 
+function aggravateWizard() {
+  if (G.room !== 'overlook') return false;
+  G.wizAggro++;
+  if (G.wizAggro === 1) {
+    print(`The wizard opens one eye.`);
+    print(`<span class="dialog">"Please don't touch my things."</span>`, 'dialog');
+    print(`He closes it again. The air in the room feels slightly different.`);
+  } else if (G.wizAggro === 2) {
+    print(`The wizard opens both eyes. He looks at you with an expression of infinite patience being stretched very thin.`);
+    print(`<span class="dialog">"I asked you not to touch my things. I will not ask again."</span>`, 'dialog');
+    print(`The crystals on their strings are perfectly still, even though there is a breeze.`);
+  } else {
+    print(`The wizard rises without appearing to stand — he is simply suddenly upright, robes settling around him, eyes fully open for the first time.`);
+    print(`<span class="dialog">"I did warn you."</span>`, 'dialog');
+    print(``);
+    print(`There is a sound like a single note struck on a very old bell.`);
+    print(``);
+    print(`You are very small now. The shelf is enormous above you. Everything smells different. You have four legs and no pockets.`);
+    print(``);
+    print(`<span class="win">You have been turned into a newt.</span>`);
+    print(`<span class="sys"><em>(Type <b>restart</b> to begin again.)</em></span>`);
+    sf('isNewt');
+  }
+  return true;
+}
+
 function cmdHelp() {
   print(`<span class="sys">Things you can do:</span>`);
   [
@@ -1794,6 +1861,17 @@ function smartFallback(raw) {
 // ── Main parser ─────────────────────────────────────────────────
 
 function parse(raw) {
+  // Newt — only restart works
+  if (f('isNewt')) {
+    const inp2 = raw.trim().toLowerCase();
+    if (['restart','new game','start over','reset','begin again'].includes(inp2)) {
+      clearSave(); print(`<em>The forest fades...</em>`, 'sys'); setTimeout(() => location.reload(), 600);
+    } else {
+      print(`You are a newt. Your options are limited. (Type <b>restart</b> to begin again.)`, 'sys');
+    }
+    return;
+  }
+
   // Restart / new game
   const inp = raw.trim().toLowerCase();
   if (['restart','new game','start over','reset','begin again'].includes(inp)) {
