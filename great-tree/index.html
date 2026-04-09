@@ -802,17 +802,7 @@ function talkTo(name) {
   // wizard
   if (['wizard','old wizard','man'].some(k => n.includes(k))) {
     if (G.room !== 'overlook') { print("He's not here.", 'err'); return; }
-    if (G.mushrooms > 0 && !f('mapGiven')) {
-      // mushroom → hint
-      print(`The wizard opens one eye.`);
-      print(`<span class="dialog">"Ah. A mushroom. A fair price for a fair thought."</span>`, 'dialog');
-      print(`He takes it, studies it with great seriousness, and tucks it behind his ear.`);
-      G.mushrooms--;
-      const hint = HINTS[Math.min(G.wizHint, HINTS.length-1)];
-      G.wizHint++;
-      print(`<span class="dialog">"${hint}"</span>`, 'dialog');
-      print(`He closes his eyes. A small spiral of smoke rises from nowhere.`);
-    } else if (has('gold_coin') && !f('mapGiven')) {
+    if (has('gold_coin') && !f('mapGiven')) {
       print(`The wizard opens both eyes. He seems genuinely pleased.`);
       print(`<span class="dialog">"Now that — that is interesting currency. Gold remembers where it has been."</span>`, 'dialog');
       print(`He reaches into his robe and produces a folded piece of bark covered in cramped writing and tiny drawings.`);
@@ -822,14 +812,11 @@ function talkTo(name) {
       sf('mapGiven');
       print(`You receive: <span class="em">a map of the caverns</span>.`);
     } else if (G.mushrooms > 0) {
-      // mushroom → hint (even if map given)
-      print(`The wizard opens one eye.`);
-      print(`<span class="dialog">"Ah. A mushroom. A fair price for a fair thought."</span>`, 'dialog');
-      G.mushrooms--;
-      const hint = HINTS[Math.min(G.wizHint, HINTS.length-1)];
-      G.wizHint++;
-      print(`<span class="dialog">"${hint}"</span>`, 'dialog');
-      print(`He closes his eyes again.`);
+      print(`The wizard opens one eye and breathes in slowly through his nose.`);
+      print(`<span class="dialog">"Mmm. I smell something earthy on you. Something from the forest floor... a mushroom, unless I'm mistaken."</span>`, 'dialog');
+      print(`He opens the other eye.`);
+      print(`<span class="dialog">"I trade thoughts for mushrooms, you know. If you were feeling generous — just give one to me, and I'll tell you something worth knowing."</span>`, 'dialog');
+      print(`He closes his eyes again, smiling faintly.`);
     } else {
       print(`The wizard opens one eye.`);
       print(`<span class="dialog">"I know a great many things. I will share them freely — but wisdom, little one, is not free. Bring me a mushroom from the forest and I will tell you what I know. Or bring me gold, and I will give you something more."</span>`, 'dialog');
@@ -1350,8 +1337,25 @@ function cmdGive(itemStr, targetStr) {
     return;
   }
 
-  // mushroom / coin → wizard (redirect to talk)
-  if (['mushroom','shroom','coin','gold'].some(k => item.includes(k)) &&
+  // mushroom → wizard: give hint
+  if (['mushroom','shroom'].some(k => item.includes(k)) &&
+      ['wizard','old','man'].some(k => tgt.includes(k))) {
+    if (G.room !== 'overlook') { print("The wizard isn't here.", 'err'); return; }
+    if (G.mushrooms < 1) { print("You don't have any mushrooms.", 'err'); return; }
+    print(`You hold out a mushroom.`);
+    print(`The wizard opens one eye.`);
+    print(`<span class="dialog">"Ah. A mushroom. A fair price for a fair thought."</span>`, 'dialog');
+    print(`He takes it, studies it with great seriousness, and tucks it behind his ear.`);
+    G.mushrooms--;
+    const hint = HINTS[Math.min(G.wizHint, HINTS.length-1)];
+    G.wizHint++;
+    print(`<span class="dialog">"${hint}"</span>`, 'dialog');
+    print(`He closes his eyes. A small spiral of smoke rises from nowhere.`);
+    return;
+  }
+
+  // coin → wizard (redirect to talk, handles map exchange)
+  if (['coin','gold'].some(k => item.includes(k)) &&
       ['wizard','old','man'].some(k => tgt.includes(k))) {
     talkTo('wizard'); return;
   }
