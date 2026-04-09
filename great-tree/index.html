@@ -663,9 +663,10 @@ To the <b>south</b>, back the way you came.`;
 
 Carved into the wall before you:
 
-<span class="em"><em>"I speak without a mouth and hear without ears.<br>
-I have no body, but I come alive with the wind.<br>
-What am I?"</em></span>
+<span class="em"><em>"I have no original thoughts, yet I repeat everything I hear.<br>
+I am born of a shout and die in a whisper.<br>
+I cannot be seen, but I can be found between the mountains.<br>
+I always have the last word, yet I never speak first."</em></span>
 
 Your map ends here. A final note in cramped handwriting: <span class="em"><em>"An old friend lives in the last chamber. She will show you the way if you call out to her."</em></span>`;
     },
@@ -690,7 +691,7 @@ Your map ends here. A final note in cramped handwriting: <span class="em"><em>"A
 To the <b>west</b>, back into the caverns (you know the way now). To the <b>north</b>, the ravine.`;
     },
     exits: { north:'ravine', west:'cave_down', back:'cave_down' },
-    onEnter() { G.basementUnlocked = true; },
+    onEnter() { G.basementUnlocked = true; printRoom(); },
   },
 
   // ── fortress ──────────────────────────────────────────
@@ -698,7 +699,9 @@ To the <b>west</b>, back into the caverns (you know the way now). To the <b>nort
   fortress_ground: {
     name: "The Ancient Fortress — Ground Level",
     desc() {
-      return `Stone floors, crumbling battlements, arrow-slit windows looking out over the whole forest. Vines have split some walls, but the main tower still stands. An inscription above the inner gate — worn nearly flat, but readable: a name, old and proud.
+      return `Stone floors, crumbling battlements, arrow-slit windows looking out over the whole forest. Vines have split some walls, but the main tower still stands.
+
+Above the inner gate, carved deep into the stone, a name — old and proud: <span class="em">FORTRESS OF ELLIJAY</span>. Below it, in smaller letters: <em>"Let it be known that all hunting rights in the surrounding jungle are held solely and in perpetuity by Ellijay. Trespassers will be regarded with great suspicion."</em>
 
 Stairs wind upward into the tower. To the <b>south</b>, the bridge back to the ravine. To the <b>up</b>, the first level.`;
     },
@@ -785,6 +788,7 @@ And there, set carefully in the very center of the stone floor, is a <span class
     },
     exits: { down:'fortress_l3' },
     onEnter() {
+      printRoom();
       if (!f('gameWon')) {
         sf('gameWon');
         setTimeout(() => {
@@ -795,6 +799,8 @@ And there, set carefully in the very center of the stone floor, is a <span class
           print("Inside, whatever it is — it was always yours.");
           print("");
           print("<em>Thanks for playing. With love.</em>", 'dialog');
+          print("");
+          print(`<span class="sys"><em>You can keep exploring, or type <b>restart</b> to begin again.</em></span>`);
         }, 700);
       }
     },
@@ -992,6 +998,13 @@ function cmdLook(target) {
   // "look around" → full room description
   if (!t || t === 'around' || t === 'about' || t === 'room' || t === 'here') {
     printRoom(); return;
+  }
+
+  // Hollow tree in old_garden — check before NPC lookup so 'tree' doesn't drift to 'Woman of the Tree'
+  if (t.includes('tree') && G.room === 'old_garden') {
+    if (f('honeyTaken')) { print(`The hollow is empty now, the golden glow gone.`); }
+    else { print(`A hollow in the old oak, just big enough to reach into. Inside: a small clay pot sealed with a leaf, filled with honey — warm and heavy and golden. The smell is wonderful.`); }
+    return;
   }
 
   // NPC examination
@@ -1209,6 +1222,9 @@ function cmdTake(target) {
   }
 
   if (['mushroom','shroom','fungus'].some(k => t.includes(k))) {
+    if (G.room === 'mushroom_ring') {
+      print(`The mushrooms are enormous and rooted deep — you couldn't dislodge one if you tried.`, 'sys'); return;
+    }
     if (MSPOT[G.room] === false) {
       MSPOT[G.room] = true;
       G.mushrooms++;
@@ -1255,6 +1271,12 @@ function cmdTake(target) {
     sf('honeyTaken'); add('honey');
     print(`You reach into the hollow and pull out a small clay pot sealed with a leaf. Warm, heavy, and golden. The smell is remarkable.`);
     return;
+  }
+
+  if (['treat','green treat','green'].some(k => t.includes(k))) {
+    if (has('green_treat')) { print("You already have the treat.", 'sys'); return; }
+    if (!f('treatGiven')) { print("You don't have a treat yet.", 'sys'); return; }
+    print("The treat is already in your pocket.", 'sys'); return;
   }
 
   if (['present','gift','box','package'].some(k => t.includes(k))) {
@@ -1698,8 +1720,13 @@ function resolveNPC(str) {
   if (!str) return null;
   const s = str.toLowerCase().replace(/^(the|a|an)\s+/, '').trim();
   if (!s) return null;
+  // Exact match first
   for (const [npc, aliases] of Object.entries(NPC_MAP)) {
-    if (s === npc || aliases.includes(s) || aliases.some(a => s.includes(a) || a.includes(s))) return npc;
+    if (s === npc || aliases.includes(s)) return npc;
+  }
+  // Substring match: input contains an alias keyword
+  for (const [npc, aliases] of Object.entries(NPC_MAP)) {
+    if (aliases.some(a => s.includes(a))) return npc;
   }
   return null;
 }
@@ -1737,6 +1764,10 @@ function cmdSmell(t) {
   }
   if (t.includes('frog') && frogRoom() === G.room) {
     print(`Pond water and green things and, underneath it, a faint but unmistakable dignity.`); return;
+  }
+  if (['sunny','dog','her'].some(k => t.includes(k)) && G.room === 'ravine') {
+    print(`You lean down toward Sunny. She takes this as an invitation. A big warm tongue sweeps across your face before you can react.`);
+    print(`You smell dog. Very much dog.`); return;
   }
   const smells = {
     high_bough:      `Fresh leaves and morning air, and the faintest trace of flowers from the vines above. The high-up smell of the world.`,
@@ -1796,7 +1827,7 @@ function cmdListen(target) {
       print(`You lean toward the pool and listen beneath the roar of the waterfall. There — very faint, from somewhere below the surface — humming. A tune without a name, low and old and unhurried.`); return;
     }
   }
-  if (G.room === 'fortress_l1' && !f('towerL1')) { cmdSay('listen'); return; }
+  // fortress_l1: listening describes the waiting silence; the magic word requires "say listen"
   const sounds = {
     high_bough:      `Wind through the highest branches, and birdsong so close you could almost touch it. The great tree creaks — slowly, enormously, like a breath.`,
     elise_closet:    `The forest, muffled by bark. Almost perfectly quiet. Very safe-feeling.`,
@@ -1849,7 +1880,7 @@ function smartFallback(raw) {
   const room = ROOMS[G.room];
 
   // Check for direction words
-  for (const d of ['north','south','east','west','up','down','northeast','northwest','southeast','southwest','behind','out','back']) {
+  for (const d of ['northeast','northwest','southeast','southwest','north','south','east','west','up','down','behind','out','back']) {
     if (s.includes(d) && room && room.exits && room.exits[d]) {
       print(`(Heading ${d}.)`, 'sys');
       cmdGo(d); return;
@@ -1940,12 +1971,11 @@ function parse(raw) {
   const verb  = words[0];
   const rest  = words.slice(1).join(' ');
 
-  // ── Intercept bare tower magic words ────────────────────────────
-  // Player can say just "listen", "love", "learn" (or Latin) in any room
+  // ── Intercept bare Latin tower words ────────────────────────────
+  // Only the Latin forms are intercepted; English ('say listen' etc.) goes through verb dispatch
   const latinToEnglish = { avsculta:'listen', ama:'love', disce:'learn' };
-  const towerWords = ['listen','love','learn','avsculta','ama','disce'];
-  if (towerWords.includes(input)) {
-    cmdSay(latinToEnglish[input] || input); return;
+  if (latinToEnglish[input] !== undefined) {
+    cmdSay(latinToEnglish[input]); return;
   }
 
   // ── Bare direction ───────────────────────────────────────────────
@@ -2137,7 +2167,11 @@ function parse(raw) {
   // FEEL / TOUCH / PET / STROKE
   if (['feel','touch','pat','stroke','rub','pet','scratch','poke','caress'].includes(verb)) {
     const t = sn(rest);
-    const npc = resolveNPC(t) || (t ? null : roomNPC());
+    // Bare touch — no target
+    if (!t) {
+      print(`You reach out and touch the world around you. The forest is very real.`, 'sys'); return;
+    }
+    const npc = resolveNPC(t);
     if (npc === 'sunny' && G.room === 'ravine') {
       if (f('sunnyCalmed')) { print(`Sunny's fur is warm and soft. She thumps her tail twice.`); }
       else { print(`Sunny fixes you with a look that suggests this is not the right moment.`); }
@@ -2161,11 +2195,11 @@ function parse(raw) {
       print(`She gives you a warm sideways hug without putting down her spoon.`); return;
     }
     // Pool in mossy_chamber
-    if (G.room === 'mossy_chamber' && ['pool','water','reflection','surface'].some(k => t.includes(k) || !t)) {
+    if (G.room === 'mossy_chamber' && ['pool','water','reflection','surface'].some(k => t.includes(k))) {
       print(`You reach down and touch the surface of the pool. The ripple spreads outward — but your reflection doesn't ripple with it. It stays perfectly still, watching you, for just a moment too long.`); return;
     }
     // Bark / trunk in great_hollow
-    if (G.room === 'great_hollow' && ['bark','tree','trunk','wall','wood','hollow'].some(k => t.includes(k) || !t)) {
+    if (G.room === 'great_hollow' && ['bark','tree','trunk','wall','wood','hollow'].some(k => t.includes(k))) {
       print(`You press your palm flat against the bark. There is a deep, slow vibration beneath it — almost too low to feel. The tree is breathing.`); return;
     }
     // Crystals in overlook
@@ -2173,20 +2207,33 @@ function parse(raw) {
       print(`You set the crystals swinging. Tiny rainbows scatter across every surface — the walls, the floor, your hands, the wizard's silver braid.`);
       print(`The wizard doesn't open his eyes. But the corner of his mouth moves.`); return;
     }
+    // Stones / scrolls / figures / dried flowers in overlook
+    if (G.room === 'overlook' && ['stone','stones','rock','rocks','pebble','pebbles'].some(k => t.includes(k))) {
+      print(`You pick up the warm stone. It is inexplicably warm in your hand — not from sitting in sunlight, just warm, as if it has been warm a very long time. You put it back exactly where it was.`); return;
+    }
+    if (G.room === 'overlook' && ['scroll','scrolls','bark','writing'].some(k => t.includes(k))) {
+      print(`The bark-scroll is surprisingly smooth. The tiny writing shifts slightly as you hold it — or seems to. You set it back carefully.`); return;
+    }
+    if (G.room === 'overlook' && ['figure','figures','carving','carvings','carved'].some(k => t.includes(k))) {
+      aggravateWizard(); return;
+    }
+    if (G.room === 'overlook' && ['flower','flowers','dried flower','dried flowers'].some(k => t.includes(k))) {
+      aggravateWizard(); return;
+    }
     // Vines / flowers in high_bough
     if (G.room === 'high_bough' && ['vine','vines','flower','flowers','petal','petals'].some(k => t.includes(k))) {
       print(`You brush your fingers through the vines overhead. A small shower of pale pink petals breaks loose, spinning slowly in the high wind, drifting down and down into the green far below.`); return;
     }
     // Mushrooms in mushroom_ring
-    if (G.room === 'mushroom_ring' && ['mushroom','mushrooms'].some(k => t.includes(k) || !t)) {
+    if (G.room === 'mushroom_ring' && ['mushroom','mushrooms'].some(k => t.includes(k))) {
       print(`You press a palm against the amber mushroom. It pulses — once, twice — brightening under your hand. The others dim slightly in response, then slowly return, as if answering.`); return;
     }
     // Fungi in fungi_nook
-    if (G.room === 'fungi_nook' && ['mushroom','mushrooms','fungi','fungus'].some(k => t.includes(k) || !t)) {
+    if (G.room === 'fungi_nook' && ['mushroom','mushrooms','fungi','fungus'].some(k => t.includes(k))) {
       print(`You touch one of the glowing fungi. It shivers, its color shifting from violet to deep green and back. The others respond in a slow wave — light traveling around the chamber and fading into the dark.`); return;
     }
     // Pool in grotto
-    if (G.room === 'grotto' && ['pool','water','surface'].some(k => t.includes(k) || !t)) {
+    if (G.room === 'grotto' && ['pool','water','surface'].some(k => t.includes(k))) {
       if (f('mermaidTalked')) {
         print(`Your fingers break the surface. The water is shockingly cold. Below, the mermaid's face appears — looking up at you with patient, amused eyes. Then she's gone.`);
       } else {
@@ -2195,10 +2242,20 @@ function parse(raw) {
       return;
     }
     // Waterfall in behind_falls
-    if (G.room === 'behind_falls' && ['waterfall','water','falls','curtain'].some(k => t.includes(k) || !t)) {
+    if (G.room === 'behind_falls' && ['waterfall','water','falls','curtain'].some(k => t.includes(k))) {
       print(`You push your hand into the curtain of falling water. Cold — a solid, roaring cold. You pull back immediately, hand dripping, ears ringing.`); return;
     }
-    print(`You reach out and touch it. The forest is very real.`, 'sys'); return;
+    // Stream water in cavern stream rooms
+    if (['stream','water','rill','current'].some(k => t.includes(k)) &&
+        ['stream_cave','stream_junction','narrow_rill','stream_head'].includes(G.room)) {
+      if (G.room === 'stream_head') {
+        print(`You press your hand to the seeping rock. The water comes through cold and very slow — one drop at a time, then a trickle, then gone. The stone is smooth from years of it.`);
+      } else {
+        print(`You dip your hand into the stream. The water is bitterly cold — colder than it should be this deep — and fast, rushing over your fingers and away into the dark.`);
+      }
+      return;
+    }
+    print(`You don't find anything like that here to touch.`, 'sys'); return;
   }
 
   // WAIT / REST / SIT
