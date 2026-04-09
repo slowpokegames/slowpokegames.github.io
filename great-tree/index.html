@@ -1529,18 +1529,22 @@ function cmdInventory() {
 function cmdHelp() {
   print(`<span class="sys">Things you can do:</span>`);
   [
-    ['go [direction]', 'north / south / east / west / up / down (or n/s/e/w/u/d)'],
-    ['look [thing]',   'look around, or examine something'],
-    ['take [thing]',   'pick something up'],
-    ['talk to [name]', 'speak with someone'],
-    ['give [thing] to [name]', 'hand something over'],
-    ['use [thing] on [target]','use an item'],
-    ['open [thing]',   'open something'],
-    ['read [thing]',   'read something'],
-    ['light [thing]',  'light something on fire'],
-    ['say [word]',     'speak something aloud — some places are listening'],
-    ['kiss [name]',    'for a very specific situation'],
-    ['inventory / i',  'see what you\'re carrying'],
+    ['go [direction]',           'north / south / east / west / up / down (or n/s/e/w/u/d)'],
+    ['look [thing]',             'look around, or examine something specific'],
+    ['take [thing]',             'pick something up'],
+    ['talk to [name]',           'speak with someone'],
+    ['give [thing] to [name]',   'hand something over'],
+    ['use [thing] on [target]',  'use an item'],
+    ['open [thing]',             'open something'],
+    ['read [thing]',             'read something'],
+    ['light [thing]',            'light something on fire'],
+    ['say [word]',               'speak something aloud — some places are listening'],
+    ['kiss [name]',              'for a very specific situation'],
+    ['smell [thing]',            'smell the room, or something in it'],
+    ['listen [to thing]',        'listen to the room, or to someone nearby'],
+    ['touch [thing]',            'touch something — the forest rewards curiosity'],
+    ['inventory / i',            'see what you\'re carrying'],
+    ['restart',                  'start a new game'],
   ].forEach(([cmd, note]) =>
     print(`&nbsp;&nbsp;<b>${cmd}</b> &nbsp;— ${note}`));
 }
