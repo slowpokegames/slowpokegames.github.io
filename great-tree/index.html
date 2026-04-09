@@ -542,17 +542,25 @@ Your map reads: <span class="em"><em>"Where the dripping echoes loudest — that
 
 To the <b>west</b>, toward the dripping. To the <b>east</b>, the quiet passage. To the <b>up</b>, back to the root mouth.`;
     },
-    exits: { west:'blind_grotto', east:'fox_chamber', up:'cave_down', back:'cave_down' },
+    exits: { west:'dripping_passage', east:'fox_chamber', up:'cave_down', back:'cave_down' },
+  },
+
+  dripping_passage: {
+    name: "The Wet Passage",
+    desc() {
+      return `The passage descends and the walls grow slick, streaked dark with moisture. The dripping ahead has become a steady rush — water sheeting down rock somewhere close. The floor is slippery. To the <b>west</b>, deeper. To the <b>east</b>, back to the junction.`;
+    },
+    exits: { west:'blind_grotto', east:'dripping_hall', back:'dripping_hall' },
   },
 
   blind_grotto: {
     name: "The Blind Grotto",
     desc() {
-      return `The passage narrows and closes into a dead end. The dripping here is very loud.${!MSPOT.blind_grotto ? `\n\nTucked into a crevice, glowing faintly orange: a <span class="em">mushroom</span>. How did it get this far down?` : ''}
+      return `The passage ends at a wall of solid rock, water pouring down it in a constant curtain — the source of all that dripping. Cold mist fills the air. Nowhere to go.${!MSPOT.blind_grotto ? `\n\nTucked into a crevice beside the waterfall, glowing faintly orange: a <span class="em">mushroom</span>. How did it get this far down?` : ''}
 
 To the <b>east</b>, back the way you came.`;
     },
-    exits: { east:'dripping_hall', back:'dripping_hall' },
+    exits: { east:'dripping_passage', back:'dripping_passage' },
   },
 
   fox_chamber: {
@@ -564,17 +572,25 @@ Your map reads: <span class="em"><em>"The earth remembers its tenants. Do not fo
 
 To the <b>west</b>, back the way you came.`;
     },
-    exits: { south:'old_den', east:'bat_roost', west:'dripping_hall' },
+    exits: { south:'fox_tunnel', east:'bat_roost', west:'dripping_hall' },
+  },
+
+  fox_tunnel: {
+    name: "The Fox Tunnel",
+    desc() {
+      return `A low tunnel where you have to crouch. The fox-smell is overwhelming — warm musk and old earth and something long-lived. Scratch-marks cover the walls at knee height, and the paw prints in the soft floor are thick as carpet. To the <b>south</b>, the tunnel opens wider. To the <b>north</b>, back.`;
+    },
+    exits: { south:'old_den', north:'fox_chamber', back:'fox_chamber' },
   },
 
   old_den: {
     name: "An Old Den",
     desc() {
-      return `The tunnel ends in a rounded chamber that smells powerfully of fox. Old bones and smooth stones are arranged in neat piles. No way forward.
+      return `A rounded chamber, low and warm, smelling powerfully of fox. Old bones and smooth stones are arranged in neat piles along the walls. Claw-marks score every surface. The tunnel ends here — no way forward.
 
-To the <b>north</b>, back.`;
+To the <b>north</b>, back the way you came.`;
     },
-    exits: { north:'fox_chamber', back:'fox_chamber' },
+    exits: { north:'fox_tunnel', back:'fox_tunnel' },
   },
 
   bat_roost: {
@@ -594,17 +610,25 @@ Your map reads: <span class="em"><em>"The bats know which way the sky is. You sh
 
 Your map reads: <span class="em"><em>"Follow the water. It knows where out is."</em></span>`;
     },
-    exits: { east:'riddle_junction', north:'stream_head', west:'bat_roost' },
+    exits: { east:'riddle_junction', north:'narrow_rill', west:'bat_roost' },
+  },
+
+  narrow_rill: {
+    name: "The Narrow Rill",
+    desc() {
+      return `The stream shrinks here to a trickle threading between stones, barely covering the floor. The ceiling presses lower. Strangely, the sound of the water is getting <em>quieter</em> the further north you go — not what you might expect. To the <b>north</b>, the trickle continues. To the <b>south</b>, back downstream.`;
+    },
+    exits: { north:'stream_head', south:'stream_junction', back:'stream_junction' },
   },
 
   stream_head: {
     name: "The Head of the Stream",
     desc() {
-      return `The stream bubbles up from a crack in the rock here, cold and bright. No way forward.
+      return `The trickle seeps up through a crack in the floor here — barely a puddle, cold and clear. The tunnel ends. Nothing further.
 
-To the <b>south</b>, back downstream.`;
+To the <b>south</b>, back the way you came.`;
     },
-    exits: { south:'stream_junction', back:'stream_junction' },
+    exits: { south:'narrow_rill', back:'narrow_rill' },
   },
 
   riddle_junction: {
