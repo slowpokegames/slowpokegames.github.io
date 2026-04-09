@@ -212,11 +212,11 @@ To the <b>south</b>, back to the bough.`;
       const frog = frogRoom()==='canopy_walk';
       return `A broad branch — wide as a road — stretches between the great trunks of several enormous trees. Hanging bridges of twisted vine sway in every direction.
 
-To the <b>north</b>, the high bough where you woke. To the <b>west</b>, the oldest trunk, its bark dark and knotted. To the <b>northwest</b>, a mossy hollow. To the <b>southwest</b>, vines part over a wide opening. To the <b>northeast</b>, blue feathers wind around an entrance. To the <b>southeast</b>, bark carved with strange symbols. To the <b>south</b>, the sound of rushing water. To the <b>down</b>, the root-staircase winds toward the forest floor.${frog ? `\n\nA large green frog sits on a vine nearby, motionless, watching you with enormous golden eyes.` : ''}`;
+To the <b>north</b>, the high bough where you woke. To the <b>west</b>, the oldest trunk, its bark dark and knotted. To the <b>northeast</b>, blue feathers wind around an entrance. To the <b>southeast</b>, bark carved with strange symbols. To the <b>south</b>, the sound of rushing water. To the <b>down</b>, the root-staircase winds toward the forest floor.${frog ? `\n\nA large green frog sits on a vine nearby, motionless, watching you with enormous golden eyes.` : ''}`;
     },
     exits: {
-      north:'high_bough', west:'great_hollow', northwest:'mossy_chamber',
-      southwest:'overlook', northeast:'songbird_nest', southeast:'lookout_perch',
+      north:'high_bough', west:'great_hollow',
+      northeast:'songbird_nest', southeast:'lookout_perch',
       south:'grotto', down:'root_chamber', closet:'bark_nook', east:'bark_nook',
     },
   },
@@ -274,9 +274,9 @@ To the <b>east</b>, the canopy walk. To the <b>northwest</b>, a root-arch leads 
     desc() {
       return `A small, still room where everything is covered in velvet-soft green moss. A dark pool in the floor reflects your face back — perhaps a little too perfectly.
 
-To the <b>southeast</b>, the great hollow. To the <b>east</b>, the canopy walk.`;
+To the <b>southeast</b>, the great hollow.`;
     },
-    exits: { southeast:'great_hollow', east:'canopy_walk' },
+    exits: { southeast:'great_hollow' },
   },
 
   overlook: {
@@ -288,9 +288,9 @@ An old wizard sits cross-legged in the middle of it all, eyes half-closed, weari
 
 A thick <span class="em">dictionary</span> lies open on a root-shelf nearby.
 
-To the <b>northeast</b>, the great hollow. To the <b>north</b>, the canopy walk.`;
+To the <b>northeast</b>, the great hollow.`;
     },
-    exits: { northeast:'great_hollow', north:'canopy_walk' },
+    exits: { northeast:'great_hollow' },
   },
 
   songbird_nest: {
@@ -340,9 +340,9 @@ To the <b>west</b>, the canopy walk.`;
     desc() {
       return `At the base of the great tree, enormous roots arch up around you like the fingers of a buried giant, forming a high vaulted chamber. Light filters down from the canopy far above.
 
-To the <b>north</b>, a grand arch of pale bark opens to a sunlit clearing. To the <b>west</b>, flowers spill from a leafy curtain. To the <b>east</b>, a circle of glowing mushrooms pulses softly. To the <b>south</b>, the earth gives way to a warm, dark burrow. To the <b>up</b>, the root-staircase winds back toward the canopy.`;
+To the <b>north</b>, a grand arch of pale bark opens to a sunlit clearing. To the <b>east</b>, flowers spill from a leafy curtain. To the <b>west</b>, a circle of glowing mushrooms pulses softly. To the <b>south</b>, the earth gives way to a warm, dark burrow. To the <b>up</b>, the root-staircase winds back toward the canopy.`;
     },
-    exits: { up:'canopy_walk', north:'clearing', west:'bower', east:'mushroom_ring', south:'fox_warren' },
+    exits: { up:'canopy_walk', north:'clearing', east:'bower', west:'mushroom_ring', south:'fox_warren' },
   },
 
   clearing: {
@@ -374,9 +374,9 @@ To the <b>north</b>, a grand arch of pale bark opens to a sunlit clearing. To th
 
 It is heavier than it looks.${!f('flowerTaken') ? `\n\nA cluster of small <span class="em">blue flowers</span> grows from a crack in the root-wall, fragrant and bright.` : ''}${frogHere ? `\n\nA large green frog crouches half-hidden under a golden leaf on the lowest shelf, very still.` : ''}
 
-To the <b>east</b>, the root chamber.`;
+To the <b>west</b>, the root chamber.`;
     },
-    exits: { east:'root_chamber', out:'root_chamber' },
+    exits: { west:'root_chamber', out:'root_chamber' },
   },
 
   mushroom_ring: {
@@ -385,9 +385,9 @@ To the <b>east</b>, the root chamber.`;
       const frogHere = frogRoom()==='mushroom_ring';
       return `A perfect circle of enormous mushrooms, each glowing a different color — amber, violet, sea-green, rose. In the center, a flat stone serves as a table, set with acorn-cap bowls and leaf-plates as though a feast just ended.${frogHere ? `\n\nA large green frog sits on the amber mushroom, perfectly still, staring at nothing in particular.` : ''}
 
-To the <b>west</b>, the root chamber. To the <b>south</b>, between the two tallest mushrooms, a path leads deeper.`;
+To the <b>east</b>, the root chamber. To the <b>south</b>, between the two tallest mushrooms, the warm smell of cooking drifts up.`;
     },
-    exits: { west:'root_chamber', south:'fox_warren' },
+    exits: { east:'root_chamber', south:'cooking_grotto' },
   },
 
   fox_warren: {
@@ -434,9 +434,9 @@ To the <b>north</b>, the root tunnel.`;
 
 The Woman of the Tree stands at the stone hearth, stirring a pot with a long wooden spoon. She is beautiful in the way that old trees are beautiful — warm and steady, with kind eyes that catch the firelight. When she looks up at you, the whole room feels a little more like home.${frogHere ? `\n\nA large green frog sits on the hearthstone, watching the ${fire ? 'fire' : 'cold log'} with great interest.` : ''}${!MSPOT.cooking_grotto ? `\n\nUnder a clay pot on a low shelf: a <span class="em">mushroom</span>, golden-yellow and plump.` : ''}
 
-To the <b>north</b>, a passage rises toward daylight. To the <b>east</b>, the root tunnel. To the <b>west</b>, something rushes and gurgles.`;
+To the <b>north</b>, the mushroom ring. To the <b>east</b>, the root tunnel. To the <b>west</b>, something rushes and gurgles. A passage <b>out</b> rises toward daylight.`;
     },
-    exits: { north:'cave_mouth', east:'root_tunnel', west:'stream_cave' },
+    exits: { north:'mushroom_ring', out:'cave_mouth', east:'root_tunnel', west:'stream_cave' },
   },
 
   stream_cave: {
@@ -1054,7 +1054,7 @@ function cmdLook(target) {
   if (['flower','flowers','bloom','blossom','blue flower','blue flowers'].some(k => t.includes(k))) {
     if (G.room === 'songbird_nest') {
       print(`At the unicorn's hooves: a single blue flower, pressed flat and dried, kept long past its time. It belongs to her.`);
-      if (!f('flowerTaken')) print(`Fresh blue flowers grow in the bower — west of the great root chamber, past the ivy curtain.`);
+      if (!f('flowerTaken')) print(`Fresh blue flowers grow in the bower — east of the great root chamber, past the ivy curtain.`);
     } else if (!f('flowerTaken') && G.room === 'bower') {
       print(`Small blue flowers growing from a crack in the root-wall. Fresh, fragrant, smelling faintly of honey.`);
     } else if (has('blue_flower')) {
@@ -1151,11 +1151,11 @@ function cmdTake(target) {
     if (has('blue_flower')) { print(`You already have the blue flowers.`, 'sys'); return; }
     if (G.room === 'songbird_nest') {
       print(`The flower at her hooves is pressed flat and dry — it has belonged to her a long time. Taking it would feel wrong.`);
-      print(`But you could bring her a fresh one. Blue flowers grow in the bower, just west of the great root chamber.`, 'sys');
+      print(`But you could bring her a fresh one. Blue flowers grow in the bower, just east of the great root chamber.`, 'sys');
       return;
     }
     if (G.room !== 'bower') {
-      print(`There are no blue flowers here to take. They grow in the bower — past the ivy curtain west of the root chamber.`, 'sys'); return;
+      print(`There are no blue flowers here to take. They grow in the bower — past the ivy curtain east of the root chamber.`, 'sys'); return;
     }
     if (f('flowerTaken')) { print(`You already picked those flowers.`, 'sys'); return; }
     sf('flowerTaken'); add('blue_flower');
