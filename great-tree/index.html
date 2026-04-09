@@ -1630,6 +1630,15 @@ function cmdSmell(t) {
   if (t.includes('mushroom') || t.includes('fungus')) { print(`Earthy, strange, and faintly sweet.`); return; }
   if (t.includes('honey')) { print(`Rich and golden and impossible to resist.`); return; }
   if (t.includes('torch')) { print(`Pine resin, sharp and clean.`); return; }
+  if (['wizard','old man','him','he'].some(k => t.includes(k)) && G.room === 'overlook') {
+    print(`Pine resin and something sweeter — old wood, dried flowers, and something else you can't name. Old starlight, maybe, if that has a smell.`); return;
+  }
+  if (['unicorn','horse','her'].some(k => t.includes(k)) && G.room === 'songbird_nest') {
+    print(`Rain and cedar and something cold and clean — like mountain air, or the moment just before snow.`); return;
+  }
+  if (t.includes('frog') && frogRoom() === G.room) {
+    print(`Pond water and green things and, underneath it, a faint but unmistakable dignity.`); return;
+  }
   const smells = {
     high_bough:      `Fresh leaves and morning air, and the faintest trace of flowers from the vines above. The high-up smell of the world.`,
     elise_closet:    `Cedar and old bark and something warm and familiar — like a favourite blanket folded away safely.`,
@@ -1678,7 +1687,16 @@ function cmdSmell(t) {
 }
 
 // Context-aware listen
-function cmdListen() {
+function cmdListen(target) {
+  if (target) {
+    const t = target.toLowerCase();
+    if (['unicorn','horse','her'].some(k => t.includes(k)) && G.room === 'songbird_nest') {
+      print(`You go very still and listen. Her breathing is slow and even — like wind through a high pass. And from her horn, very faintly, a sound like a distant wind chime, or a note held too long to hear properly.`); return;
+    }
+    if (['mermaid','her','woman'].some(k => t.includes(k)) && G.room === 'grotto') {
+      print(`You lean toward the pool and listen beneath the roar of the waterfall. There — very faint, from somewhere below the surface — humming. A tune without a name, low and old and unhurried.`); return;
+    }
+  }
   if (G.room === 'fortress_l1' && !f('towerL1')) { cmdSay('listen'); return; }
   const sounds = {
     high_bough:      `Wind through the highest branches, and birdsong so close you could almost touch it. The great tree creaks — slowly, enormously, like a breath.`,
@@ -2003,7 +2021,7 @@ function parse(raw) {
   }
 
   // LISTEN
-  if (verb === 'listen') { cmdListen(); return; }
+  if (verb === 'listen') { cmdListen(rest); return; }
 
   // FEEL / TOUCH / PET / STROKE
   if (['feel','touch','pat','stroke','rub','pet','scratch','poke','caress'].includes(verb)) {
@@ -2021,6 +2039,44 @@ function parse(raw) {
     }
     if (npc === 'unicorn' && G.room === 'songbird_nest') {
       print(`The unicorn steps back slightly. She is patient, not tame.`); return;
+    }
+    // Pool in mossy_chamber
+    if (G.room === 'mossy_chamber' && ['pool','water','reflection','surface'].some(k => t.includes(k) || !t)) {
+      print(`You reach down and touch the surface of the pool. The ripple spreads outward — but your reflection doesn't ripple with it. It stays perfectly still, watching you, for just a moment too long.`); return;
+    }
+    // Bark / trunk in great_hollow
+    if (G.room === 'great_hollow' && ['bark','tree','trunk','wall','wood','hollow'].some(k => t.includes(k) || !t)) {
+      print(`You press your palm flat against the bark. There is a deep, slow vibration beneath it — almost too low to feel. The tree is breathing.`); return;
+    }
+    // Crystals in overlook
+    if (G.room === 'overlook' && ['crystal','crystals','chime','chimes','string','strings'].some(k => t.includes(k))) {
+      print(`You set the crystals swinging. Tiny rainbows scatter across every surface — the walls, the floor, your hands, the wizard's silver braid.`);
+      print(`The wizard doesn't open his eyes. But the corner of his mouth moves.`); return;
+    }
+    // Vines / flowers in high_bough
+    if (G.room === 'high_bough' && ['vine','vines','flower','flowers','petal','petals'].some(k => t.includes(k))) {
+      print(`You brush your fingers through the vines overhead. A small shower of pale pink petals breaks loose, spinning slowly in the high wind, drifting down and down into the green far below.`); return;
+    }
+    // Mushrooms in mushroom_ring
+    if (G.room === 'mushroom_ring' && ['mushroom','mushrooms'].some(k => t.includes(k) || !t)) {
+      print(`You press a palm against the amber mushroom. It pulses — once, twice — brightening under your hand. The others dim slightly in response, then slowly return, as if answering.`); return;
+    }
+    // Fungi in fungi_nook
+    if (G.room === 'fungi_nook' && ['mushroom','mushrooms','fungi','fungus'].some(k => t.includes(k) || !t)) {
+      print(`You touch one of the glowing fungi. It shivers, its color shifting from violet to deep green and back. The others respond in a slow wave — light traveling around the chamber and fading into the dark.`); return;
+    }
+    // Pool in grotto
+    if (G.room === 'grotto' && ['pool','water','surface'].some(k => t.includes(k) || !t)) {
+      if (f('mermaidTalked')) {
+        print(`Your fingers break the surface. The water is shockingly cold. Below, the mermaid's face appears — looking up at you with patient, amused eyes. Then she's gone.`);
+      } else {
+        print(`Your fingers break the surface. The water is shockingly cold. For a moment, something stirs below — a flash of silver — then nothing.`);
+      }
+      return;
+    }
+    // Waterfall in behind_falls
+    if (G.room === 'behind_falls' && ['waterfall','water','falls','curtain'].some(k => t.includes(k) || !t)) {
+      print(`You push your hand into the curtain of falling water. Cold — a solid, roaring cold. You pull back immediately, hand dripping, ears ringing.`); return;
     }
     print(`You reach out and touch it. The forest is very real.`, 'sys'); return;
   }
