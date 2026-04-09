@@ -828,14 +828,10 @@ function talkTo(name) {
   if (['wizard','old wizard'].some(k => n.includes(k)) || n === 'man' || n === 'him' || n === 'he') {
     if (G.room !== 'overlook') { print("He's not here.", 'err'); return; }
     if (has('gold_coin') && !f('mapGiven')) {
-      print(`The wizard opens both eyes. He seems genuinely pleased.`);
-      print(`<span class="dialog">"Now that — that is interesting currency. Gold remembers where it has been."</span>`, 'dialog');
-      print(`He reaches into his robe and produces a folded piece of bark covered in cramped writing and tiny drawings.`);
-      print(`<span class="dialog">"The passages below are old and tangled. But not unknowable. Take this. Read it carefully — it speaks in feelings, not in arrows."</span>`, 'dialog');
-      rm('gold_coin');
-      add('basement_map');
-      sf('mapGiven');
-      print(`You receive: <span class="em">a map of the caverns</span>.`);
+      print(`The wizard opens one eye. It lingers on your pocket for a moment.`);
+      print(`<span class="dialog">"Gold. I can smell it from here — old gold, at that. Gold remembers where it has been."</span>`, 'dialog');
+      print(`He closes his eye again.`);
+      print(`<span class="dialog">"If you were to give it to me, I might give you something more useful in return."</span>`, 'dialog');
     } else if (G.mushrooms > 0) {
       print(`The wizard opens one eye and breathes in slowly through his nose.`);
       print(`<span class="dialog">"Mmm. I smell something earthy on you. Something from the forest floor... a mushroom, unless I'm mistaken."</span>`, 'dialog');
@@ -1441,10 +1437,20 @@ function cmdGive(itemStr, targetStr) {
     return;
   }
 
-  // coin → wizard (redirect to talk, handles map exchange)
+  // coin → wizard: give map
   if (['coin','gold'].some(k => item.includes(k)) &&
       ['wizard','old','man'].some(k => tgt.includes(k))) {
-    talkTo('wizard'); return;
+    if (G.room !== 'overlook') { print("The wizard isn't here.", 'err'); return; }
+    if (!has('gold_coin')) { print("You don't have a gold coin.", 'err'); return; }
+    if (f('mapGiven')) { print("The wizard already gave you what he had to give.", 'sys'); return; }
+    print(`You hold out the gold coin.`);
+    print(`The wizard opens both eyes. He seems genuinely pleased.`);
+    print(`<span class="dialog">"Now that is interesting. Gold remembers where it has been."</span>`, 'dialog');
+    print(`He reaches into his robe and produces a folded piece of bark covered in cramped writing and tiny drawings.`);
+    print(`<span class="dialog">"The passages below are old and tangled. But not unknowable. Take this. Read it carefully — it speaks in feelings, not in arrows."</span>`, 'dialog');
+    rm('gold_coin'); add('basement_map'); sf('mapGiven');
+    print(`You receive: <span class="em">a map of the caverns</span>.`);
+    return;
   }
 
   print(`Nothing happens.`, 'err');
