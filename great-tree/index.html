@@ -540,7 +540,7 @@ A dark cave mouth opens at the base of the ravine to the <b>east</b>. To the <b>
       const noMap = !has('basement_map');
       return `Roots form a rough ladder into cold earth. ${dark ? `It is dark below. Very dark. You would need a lit torch to go further.` : `Your torch flickers, throwing long shadows down the passage.`}${noMap ? ` You'd also want a map — these caverns are known to tangle.` : ''}
 
-To the <b>up</b>, the root tunnel.`;
+To the <b>up</b>, the root tunnel.${!dark && !noMap ? ` To the <b>down</b>, the passage into the caverns.` : ''}`;
     },
     exits: {
       up:'root_tunnel',
@@ -825,7 +825,7 @@ function talkTo(name) {
   }
 
   // wizard
-  if (['wizard','old wizard','man'].some(k => n.includes(k))) {
+  if (['wizard','old wizard'].some(k => n.includes(k)) || n === 'man' || n === 'him' || n === 'he') {
     if (G.room !== 'overlook') { print("He's not here.", 'err'); return; }
     if (has('gold_coin') && !f('mapGiven')) {
       print(`The wizard opens both eyes. He seems genuinely pleased.`);
@@ -1182,6 +1182,26 @@ function cmdTake(target) {
     print(`It's beautiful, but it feels like it belongs here. You leave it where it is.`, 'sys'); return;
   }
 
+  // Bunny → redirect to open
+  if (['bunny','ceramic','rabbit'].some(k => t.includes(k))) {
+    if (G.room !== 'bower') { print(`There's no bunny here.`, 'sys'); return; }
+    print(`The bunny is solid and heavy. But it has a seam around the middle — maybe it opens.`, 'sys'); return;
+  }
+
+  // Flint and steel from open bunny
+  if (['flint','steel','flint and steel'].some(k => t.includes(k))) {
+    if (has('flint_steel')) { print(`You already have the flint and steel.`, 'sys'); return; }
+    if (G.room !== 'bower' || !f('bunnyOpen')) { print(`There's no flint and steel here.`, 'sys'); return; }
+    sf('flintTaken'); add('flint_steel');
+    print(`You take the flint and steel from the open bunny.`); return;
+  }
+
+  // Gold coin
+  if (['coin','gold coin','gold'].some(k => t.includes(k))) {
+    if (has('gold_coin')) { print(`You already have the gold coin.`, 'sys'); return; }
+    print(`There's no coin here to take.`, 'sys'); return;
+  }
+
   // Overlook — wizard's possessions
   if (G.room === 'overlook') {
     if (['dictionary','book'].some(k => t.includes(k))) {
@@ -1269,10 +1289,12 @@ function cmdOpen(target) {
   if (['bunny','ceramic','rabbit'].some(k => t.includes(k))) {
     if (G.room !== 'bower') { print("No bunny here.", 'err'); return; }
     if (f('bunnyOpen')) {
-      print(`The bunny is already open. The flint and steel ${has('flint_steel') ? 'are in your pocket' : 'were inside'}.`);
+      if (has('flint_steel')) { print(`The bunny is already open. The flint and steel are in your pocket.`); }
+      else if (f('flintTaken')) { print(`The bunny is already open and empty.`); }
+      else { print(`The bunny is open. Inside: <span class="em">flint and steel</span>. You could take them.`); }
       return;
     }
-    sf('bunnyOpen'); sf('flintTaken'); add('flint_steel');
+    sf('bunnyOpen');
     print(`You twist the ceramic bunny gently along its seam. It opens.`);
     print(`Inside, cold and smelling faintly of struck rock: <span class="em">flint and steel</span>.`);
     return;
@@ -1875,6 +1897,7 @@ function parse(raw) {
   // Restart / new game
   const inp = raw.trim().toLowerCase();
   if (['restart','new game','start over','reset','begin again'].includes(inp)) {
+    G._restarting = true;
     clearSave();
     print(`<em>The forest fades...</em>`, 'sys');
     setTimeout(() => location.reload(), 600);
@@ -2122,6 +2145,15 @@ function parse(raw) {
     if (npc === 'unicorn' && G.room === 'songbird_nest') {
       print(`The unicorn steps back slightly. She is patient, not tame.`); return;
     }
+    if (npc === 'wizard' && G.room === 'overlook') {
+      print(`The wizard opens one eye. You think better of it.`); return;
+    }
+    if (npc === 'mermaid' && G.room === 'grotto') {
+      print(`You reach toward the pool — but she has already slipped beneath the surface, leaving only ripples.`); return;
+    }
+    if (npc === 'woman' && G.room === 'cooking_grotto') {
+      print(`She gives you a warm sideways hug without putting down her spoon.`); return;
+    }
     // Pool in mossy_chamber
     if (G.room === 'mossy_chamber' && ['pool','water','reflection','surface'].some(k => t.includes(k) || !t)) {
       print(`You reach down and touch the surface of the pool. The ripple spreads outward — but your reflection doesn't ripple with it. It stays perfectly still, watching you, for just a moment too long.`); return;
@@ -2309,7 +2341,7 @@ cmdEl.addEventListener('keydown', function(e) {
   if (e.key === 'Enter') {
     const val = this.value.trim();
     this.value = '';
-    if (val) { parse(val); saveGame(); }
+    if (val) { parse(val); if (!G._restarting) saveGame(); }
   }
 });
 
