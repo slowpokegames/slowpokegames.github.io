@@ -108,6 +108,30 @@ const G = {
   namePrompt: true,
 };
 
+// ── Save / load ────────────────────────────────────────────────
+function saveKey() { return `great-tree-v1-${G.playerName.toLowerCase()}`; }
+
+function saveGame() {
+  if (!G.playerName) return;
+  try { localStorage.setItem(saveKey(), JSON.stringify({ G, MSPOT })); } catch(e) {}
+}
+
+function loadGame(name) {
+  try {
+    const raw = localStorage.getItem(`great-tree-v1-${name.toLowerCase()}`);
+    if (!raw) return false;
+    const data = JSON.parse(raw);
+    if (!data.G || !data.MSPOT) return false;
+    Object.assign(G, data.G);
+    Object.assign(MSPOT, data.MSPOT);
+    return true;
+  } catch(e) { return false; }
+}
+
+function clearSave() {
+  localStorage.removeItem(saveKey());
+}
+
 const FROG_PATH = [
   'lookout_perch', 'canopy_walk', 'mushroom_ring',
   'bower', 'cooking_grotto', 'grotto',
@@ -1748,19 +1772,33 @@ function smartFallback(raw) {
 // ── Main parser ─────────────────────────────────────────────────
 
 function parse(raw) {
+  // Restart / new game
+  const inp = raw.trim().toLowerCase();
+  if (['restart','new game','start over','reset','begin again'].includes(inp)) {
+    clearSave();
+    print(`<em>The forest fades...</em>`, 'sys');
+    setTimeout(() => location.reload(), 600);
+    return;
+  }
+
   // Name prompt at start
   if (G.namePrompt) {
     const name = raw.trim();
     if (!name) { print(`(Please enter your name to begin.)`, 'sys'); return; }
     G.playerName = name.charAt(0).toUpperCase() + name.slice(1);
     G.namePrompt = false;
-    print(`<br>Welcome, <span class="em">${G.playerName}</span>.<br>`, 'sys');
-    setTimeout(() => {
-      print(`You open your eyes.`);
-      print(`The first thing you notice is the <em>wind</em>.`);
-      print(``);
-      setTimeout(() => { G.room = 'high_bough'; printRoom(); }, 400);
-    }, 300);
+    if (loadGame(G.playerName)) {
+      print(`<br>Welcome back, <span class="em">${G.playerName}</span>. Your adventure continues.<br>`, 'sys');
+      setTimeout(() => printRoom(), 300);
+    } else {
+      print(`<br>Welcome, <span class="em">${G.playerName}</span>.<br>`, 'sys');
+      setTimeout(() => {
+        print(`You open your eyes.`);
+        print(`The first thing you notice is the <em>wind</em>.`);
+        print(``);
+        setTimeout(() => { G.room = 'high_bough'; printRoom(); }, 400);
+      }, 300);
+    }
     return;
   }
 
@@ -2133,7 +2171,7 @@ cmdEl.addEventListener('keydown', function(e) {
   if (e.key === 'Enter') {
     const val = this.value.trim();
     this.value = '';
-    if (val) parse(val);
+    if (val) { parse(val); saveGame(); }
   }
 });
 
@@ -2143,6 +2181,7 @@ window.addEventListener('load', () => {
   print(``);
   print(`<em>A birthday adventure</em>`);
   print(``);
+
   print(`Before we begin —`);
   print(`What is your name?`);
   cmdEl.focus();
