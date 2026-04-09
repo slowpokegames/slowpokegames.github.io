@@ -536,11 +536,11 @@ To the <b>up</b>, the root tunnel.`;
   dripping_hall: {
     name: "The Dripping Hall",
     desc() {
-      return `A long passage with two branches. From the <b>west</b>, a constant loud dripping echoes — <em>plip, plip, plip</em>. The <b>east</b> branch is quieter.
+      return `The passage opens into a junction. Two tunnels branch ahead — one to the <b>west</b>, one to the <b>east</b>. From the west passage, a constant dripping echoes loudly: <em>plip, plip, plip</em>. The east passage is quiet by comparison.
 
 Your map reads: <span class="em"><em>"Where the dripping echoes loudest — that way leads nowhere. Go where it is quiet."</em></span>
 
-To the <b>up</b>, back to the root mouth.`;
+To the <b>west</b>, toward the dripping. To the <b>east</b>, the quiet passage. To the <b>up</b>, back to the root mouth.`;
     },
     exits: { west:'blind_grotto', east:'fox_chamber', up:'cave_down', back:'cave_down' },
   },
@@ -558,11 +558,11 @@ To the <b>east</b>, back the way you came.`;
   fox_chamber: {
     name: "The Fox Chamber",
     desc() {
-      return `The walls here are warm, and the earth smells strongly of fox — old dens, old memories. Two passages continue: one following the fox-smell to the <b>south</b>, one going <b>east</b> into fresher air.
+      return `The walls here are warm and the earth smells strongly of fox — old dens, old memories. Two passages continue: to the <b>south</b>, the fox-smell grows thicker. To the <b>east</b>, the air is fresher.
 
 Your map reads: <span class="em"><em>"The earth remembers its tenants. Do not follow memory."</em></span>
 
-To the <b>west</b>, back.`;
+To the <b>west</b>, back the way you came.`;
     },
     exits: { south:'old_den', east:'bat_roost', west:'dripping_hall' },
   },
@@ -580,11 +580,9 @@ To the <b>north</b>, back.`;
   bat_roost: {
     name: "The Bat Roost",
     desc() {
-      return `A soft papery rustling overhead. The ceiling is covered in bats — hundreds of them, hanging in tight clusters. They shift and resettle, their small faces all pointing... <b>east</b>.
+      return `A soft papery rustling overhead. The ceiling is covered in bats — hundreds of them, hanging in tight clusters. They shift and resettle, their small faces all pointing <b>east</b>. A passage leads that way; another leads <b>west</b>, back the way you came.
 
-Your map reads: <span class="em"><em>"The bats know which way the sky is. You should too."</em></span>
-
-To the <b>west</b>, back.`;
+Your map reads: <span class="em"><em>"The bats know which way the sky is. You should too."</em></span>`;
     },
     exits: { east:'stream_junction', west:'fox_chamber' },
   },
@@ -592,11 +590,9 @@ To the <b>west</b>, back.`;
   stream_junction: {
     name: "The Underground Stream",
     desc() {
-      return `An underground stream appears here, running swiftly. Two passages leave the chamber: one going <b>east</b> with the current, one going <b>north</b> against it.
+      return `An underground stream appears here, running swiftly. It flows from the <b>north</b> and continues <b>east</b> — downstream. A passage also leads <b>west</b>, back the way you came.
 
-Your map reads: <span class="em"><em>"Follow the water. It knows where out is."</em></span>
-
-To the <b>west</b>, back.`;
+Your map reads: <span class="em"><em>"Follow the water. It knows where out is."</em></span>`;
     },
     exits: { east:'riddle_junction', north:'stream_head', west:'bat_roost' },
   },
@@ -614,17 +610,15 @@ To the <b>south</b>, back downstream.`;
   riddle_junction: {
     name: "The Last Chamber",
     desc() {
-      return `The passage opens into a wider chamber. Two exits lead forward, but one has been sealed with smooth stone. The other is only darkness.
+      return `The passage opens into a wider chamber. Two exits lead forward — one to the <b>west</b>, back the way you came, and one to the <b>east</b>, deep in shadow.
 
-Carved deep into the wall before you:
+Carved into the wall before you:
 
 <span class="em"><em>"I speak without a mouth and hear without ears.<br>
 I have no body, but I come alive with the wind.<br>
 What am I?"</em></span>
 
-Your map ends here. A final note in cramped handwriting: <span class="em"><em>"An old friend lives in the last chamber. She will show you the way if you call out to her."</em></span>
-
-To the <b>west</b>, back. To the <b>east</b>... if you can find the way.`;
+Your map ends here. A final note in cramped handwriting: <span class="em"><em>"An old friend lives in the last chamber. She will show you the way if you call out to her."</em></span>`;
     },
     exits: {
       west:'stream_junction',
@@ -802,7 +796,7 @@ function talkTo(name) {
       rm('gold_coin');
       add('basement_map');
       sf('mapGiven');
-      print(`You receive: <span class="em">a basement map</span>.`);
+      print(`You receive: <span class="em">a map of the caverns</span>.`);
     } else if (G.mushrooms > 0) {
       // mushroom → hint (even if map given)
       print(`The wizard opens one eye.`);
@@ -1464,7 +1458,7 @@ function cmdInventory() {
   if (has('flint_steel'))   lines.push('flint and steel');
   if (has('blue_flower'))   lines.push('a cluster of blue flowers');
   if (has('gold_coin'))     lines.push('a gold coin');
-  if (has('basement_map'))  lines.push('a basement map (bark, cramped writing)');
+  if (has('basement_map'))  lines.push('a map of the caverns (bark, cramped writing)');
   if (has('torch'))         lines.push('a torch (unlit)');
   if (has('torch_lit'))     lines.push('🔥 a lit torch');
   if (has('honey'))         lines.push('a clay pot of honey');
