@@ -1294,6 +1294,7 @@ function cmdTake(target) {
 
   if (['blue flower','flower','flowers','bloom','blossom'].some(k => t.includes(k))) {
     if (has('blue_flower')) { print(`You already have the blue flowers.`, 'sys'); return; }
+    if (G.room === 'overlook') { aggravateWizard(); return; }
     if (G.room === 'songbird_nest') {
       print(`The flower at her hooves is pressed flat and dry — it has belonged to her a long time. Taking it would feel wrong.`);
       print(`But you could bring her a fresh one. Blue flowers grow in the bower, just east of the great root chamber.`, 'sys');
