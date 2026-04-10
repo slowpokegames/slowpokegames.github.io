@@ -812,8 +812,19 @@ And there, set carefully in the very center of the stone floor, is a <span class
 function talkTo(name) {
   const n = name.toLowerCase().replace(/^(the|a|an)\s+/, '');
 
+  // bunny (not an NPC, but people try)
+  if (['bunny','rabbit','ceramic'].some(k => n.includes(k))) {
+    if (G.room !== 'bower') { print(`The bunny isn't here. And even if it were — it's ceramic.`, 'sys'); return; }
+    print(`You attempt a conversation with the ceramic bunny.`);
+    print(`It listens very attentively. It has excellent posture. It does not reply.`);
+    print(`You get the distinct impression it has heard everything and judged nothing.`);
+    return;
+  }
+
   // mermaid
   if (['mermaid','her','woman in pool'].some(k => n.includes(k))) {
+    // 'her' in cooking_grotto means the Woman of the Tree, not the mermaid
+    if (G.room === 'cooking_grotto' && !n.includes('mermaid')) { talkTo('woman'); return; }
     if (G.room !== 'grotto') { print("She's not here.", 'err'); return; }
     if (f('mermaidTalked')) {
       print(`The mermaid surfaces for a moment and smiles.`);
@@ -1542,7 +1553,7 @@ function cmdKiss(target) {
   print(`He bows. He winks. He says: <span class="dialog">"I owe you one."</span>`);
   print(`Then he leaps back into the pool with a tremendous <em>SPLASH</em>, and is gone.`);
   print(`Something bobs to the surface: a tiny, perfect golden crown. You reach in and take it.`);
-  print(`<span class="sys">(You now carry: a tiny golden crown. It fits perfectly — not on your head, exactly, but somewhere nearby.)</span>`);
+  print(`<span class="sys">(You now carry: a tiny golden crown. It is about the size of a thimble — meant for a fingertip, or perhaps the head of a very small and very royal frog.)</span>`);
 }
 
 function cmdSay(words) {
@@ -2300,7 +2311,19 @@ function parse(raw) {
   }
 
   // BREAK / ATTACK / FIGHT
-  if (['break','smash','destroy','shatter','hit','attack','fight','punch','kick','stab'].includes(verb)) {
+  if (['break','smash','destroy','shatter','hit','attack','fight','punch','kick','stab',
+       'kill','murder','slay','harm','hurt','wound'].includes(verb)) {
+    const target = sn(rest);
+    const npc = target ? resolveNPC(target) : null;
+    if (npc === 'frog') {
+      print(`You look at the frog. The frog looks at you.`);
+      print(`You cannot do it. You simply cannot. He has golden eyes and a great deal of dignity.`); return;
+    }
+    if (npc === 'unicorn') { print(`Absolutely not.`, 'sys'); return; }
+    if (npc === 'sunny') { print(`You would never. Sunny would also never forgive you, and frankly, neither would you.`, 'sys'); return; }
+    if (npc === 'mermaid' || npc === 'wizard' || npc === 'woman') {
+      print(`This forest doesn't call for that kind of thing.`, 'sys'); return;
+    }
     print(`This forest doesn't call for that kind of thing.`, 'sys'); return;
   }
 
