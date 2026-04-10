@@ -826,6 +826,11 @@ function talkTo(name) {
     // 'her' in cooking_grotto means the Woman of the Tree, not the mermaid
     if (G.room === 'cooking_grotto' && !n.includes('mermaid')) { talkTo('woman'); return; }
     if (G.room !== 'grotto') { print("She's not here.", 'err'); return; }
+    if (f('crownWorn') && has('tiny_crown')) {
+      print(`The mermaid surfaces, notices the crown on your finger, and immediately dips her head beneath the water in a small, elegant bow.`);
+      print(`<span class="dialog">"Your Highness."</span>`, 'dialog');
+      print(`She resurfaces looking delighted with this development.`);
+    }
     if (f('mermaidTalked')) {
       print(`The mermaid surfaces for a moment and smiles.`);
       print(`<span class="dialog">"Still looking? Remember — behind the falls. You won't melt."</span>`, 'dialog');
@@ -844,6 +849,11 @@ function talkTo(name) {
   // wizard
   if (['wizard','old wizard'].some(k => n.includes(k)) || n === 'man' || n === 'him' || n === 'he') {
     if (G.room !== 'overlook') { print("He's not here.", 'err'); return; }
+    if (f('crownWorn') && has('tiny_crown')) {
+      print(`The wizard opens both eyes — unusual, for him. He looks at the crown on your finger for a long moment.`);
+      print(`<span class="dialog">"A frog king's crown. Well, well. Your Majesty."</span>`, 'dialog');
+      print(`He closes his eyes again, with the faintest possible smile.`);
+    }
     if (has('gold_coin') && !f('mapGiven')) {
       print(`The wizard opens one eye. It lingers on your pocket for a moment.`);
       print(`<span class="dialog">"Gold. I can smell it from here — old gold, at that. Gold remembers where it has been."</span>`, 'dialog');
@@ -866,6 +876,11 @@ function talkTo(name) {
   // Woman of the Tree
   if (['woman','cook','her','lady','mom','mother','tree'].some(k => n.includes(k))) {
     if (G.room !== 'cooking_grotto') { print("She's not here.", 'err'); return; }
+    if (f('crownWorn') && has('tiny_crown')) {
+      print(`She turns from the pot, catches sight of the crown on your finger, and puts both hands on her hips.`);
+      print(`<span class="dialog">"Your Royal Highness! In my kitchen! Well, that changes everything — sit down, sit down."</span>`, 'dialog');
+      print(`She is clearly having a wonderful time.`);
+    }
     if (f('treatGiven')) {
       print(`<span class="dialog">"The treat's already made, love. I hope it worked!"</span>`, 'dialog');
       print(`She smiles and goes back to her pot.`);
@@ -893,7 +908,11 @@ function talkTo(name) {
   // unicorn
   if (['unicorn','white','horse'].some(k => n.includes(k))) {
     if (G.room !== 'songbird_nest') { print("The unicorn isn't here.", 'err'); return; }
-    print(`The unicorn regards you with calm blue eyes. She does not speak. She waits.`);
+    if (f('crownWorn') && has('tiny_crown')) {
+      print(`The unicorn sees the crown on your finger. She dips her horn — a slow, deliberate bow. Then she raises her head and looks at you as if this is exactly what she expected all along.`);
+    } else {
+      print(`The unicorn regards you with calm blue eyes. She does not speak. She waits.`);
+    }
     if (!f('unicornGifted')) print(`At her hooves, the dried blue flower catches your eye.`);
     return;
   }
@@ -903,6 +922,14 @@ function talkTo(name) {
     const frogLoc = frogRoom();
     if (frogLoc !== G.room) { print("There is no frog here.", 'err'); return; }
     if (f('frogKissed')) { print(`The pool is still. Wherever the prince went, it was with a magnificent splash.`, 'sys'); return; }
+    if (f('crownWorn') && has('tiny_crown') && G.frogIdx === FROG_PATH.length - 1) {
+      print(`The frog on the lily pad goes completely still.`);
+      print(`His golden eyes fix on the crown on your finger.`);
+      print(`Very slowly, he blinks.`);
+      print(`<span class="dialog">"..."</span>`, 'dialog');
+      print(`You get the feeling he recognizes it.`);
+      return;
+    }
     if (G.frogIdx < FROG_PATH.length - 1) {
       G.frogIdx++;
       print(`The frog blinks once — slowly, deliberately — and launches off in a tremendous leap, vanishing before you can so much as say hello.`);
@@ -917,6 +944,11 @@ function talkTo(name) {
   // sunny / dog
   if (['sunny','dog','beast','animal'].some(k => n.includes(k))) {
     if (G.room !== 'ravine') { print("She's not here.", 'err'); return; }
+    if (f('crownWorn') && has('tiny_crown') && f('sunnyCalmed')) {
+      print(`Sunny opens both amber eyes, sniffs your finger with great interest, and gives the crown a careful lick.`);
+      print(`She appears to find it not edible. She is briefly disappointed. Then she thumps her tail and settles back down.`);
+      return;
+    }
     if (f('sunnyCalmed')) {
       print(`Sunny opens one amber eye, thumps her curly tail twice, and closes it again.`);
     } else {
@@ -1115,7 +1147,7 @@ function cmdLook(target) {
 
   // Self
   if (['self','me','myself','i'].some(k => t === k)) {
-    print(`You are ${G.playerName || 'an adventurer'}.${has('tiny_crown') ? ` You wear a tiny golden crown. It suits you.` : ``}`);
+    print(`You are ${G.playerName || 'an adventurer'}.${f('crownWorn') && has('tiny_crown') ? ` A tiny golden crown sits on your finger. It gleams. You look quite distinguished.` : has('tiny_crown') ? ` You carry a tiny golden crown in your pocket.` : ``}`);
     cmdInventory(); return;
   }
 
@@ -1617,7 +1649,7 @@ function cmdInventory() {
   if (has('torch_lit'))     lines.push('🔥 a lit torch');
   if (has('honey'))         lines.push('a clay pot of honey');
   if (has('green_treat'))   lines.push('a green treat');
-  if (has('tiny_crown'))    lines.push('✨ a tiny golden crown');
+  if (has('tiny_crown'))    lines.push(f('crownWorn') ? '✨ a tiny golden crown (worn on finger)' : '✨ a tiny golden crown');
   if (G.mushrooms > 0)      lines.push(`${G.mushrooms} mushroom${G.mushrooms!==1?'s':''}`);
 
   if (lines.length === 0) {
@@ -2338,6 +2370,36 @@ function parse(raw) {
   if (verb === 'knock') {
     if (G.room === 'fox_warren') { print(`You knock on the iron-banded door. It does not answer.`, 'sys'); }
     else { print(`There's nothing here worth knocking on.`, 'sys'); }
+    return;
+  }
+
+  // WEAR / PUT ON
+  if (['wear','equip','don','put'].includes(verb) ||
+      (verb === 'put' && rest.match(/^on\b/))) {
+    const t = sn(rest.replace(/^on\b\s*/,'')).toLowerCase();
+    if (!t || ['crown','tiny crown','golden crown','gold crown'].some(k => t.includes(k))) {
+      if (!has('tiny_crown')) { print(`You don't have a crown to wear.`, 'sys'); return; }
+      if (f('crownWorn')) { print(`You're already wearing it — on your finger, where it fits best.`, 'sys'); return; }
+      sf('crownWorn');
+      print(`You slide the tiny golden crown onto your finger. It fits perfectly.`);
+      print(`You feel, if anything, slightly more dignified than before.`);
+    } else {
+      print(`You can't wear that.`, 'sys');
+    }
+    return;
+  }
+
+  // REMOVE / TAKE OFF crown
+  if (['remove','unequip','doff'].includes(verb) ||
+      (verb === 'take' && rest.match(/^off\b/))) {
+    const t = sn(rest.replace(/^off\b\s*/,'')).toLowerCase();
+    if (!t || ['crown','tiny crown','golden crown'].some(k => t.includes(k))) {
+      if (!f('crownWorn')) { print(`You're not wearing the crown right now.`, 'sys'); return; }
+      G.flags.crownWorn = false;
+      print(`You slide the crown off your finger and tuck it safely into your pocket.`, 'sys');
+    } else {
+      print(`You're not wearing that.`, 'sys');
+    }
     return;
   }
 
