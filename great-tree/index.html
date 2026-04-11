@@ -108,7 +108,7 @@ body {
   justify-content: center;
   padding-top: 12px;
 }
-#map-panel.open { width: 272px; }
+#map-panel.open { width: 524px; }
 #map-canvas { display: block; }
 </style>
 </head>
@@ -181,30 +181,30 @@ function clearSave() {
 // ── Map regions (normalized x,y center + radius, relative to image size) ──
 // Rooms not listed have no map representation (underground/fortress areas).
 const MAP_REGIONS = {
-  elise_closet:   { x: 0.468, y: 0.095, r: 0.085 },
-  high_bough:     { x: 0.468, y: 0.250, r: 0.095 },
-  canopy_walk:    { x: 0.425, y: 0.355, r: 0.095 },
-  grotto:         { x: 0.565, y: 0.365, r: 0.090 },
-  behind_falls:   { x: 0.600, y: 0.385, r: 0.070 },
-  great_hollow:   { x: 0.270, y: 0.340, r: 0.085 },
-  mossy_chamber:  { x: 0.095, y: 0.230, r: 0.080 },
-  overlook:       { x: 0.175, y: 0.400, r: 0.085 },
-  songbird_nest:  { x: 0.800, y: 0.215, r: 0.085 },
-  lookout_perch:  { x: 0.725, y: 0.400, r: 0.085 },
-  bark_nook:      { x: 0.880, y: 0.385, r: 0.070 },
-  clearing:       { x: 0.360, y: 0.470, r: 0.080 },
-  road:           { x: 0.360, y: 0.440, r: 0.060 },
-  root_chamber:   { x: 0.465, y: 0.550, r: 0.085 },
-  bower:          { x: 0.720, y: 0.540, r: 0.085 },
-  mushroom_ring:  { x: 0.195, y: 0.585, r: 0.085 },
-  fox_warren:     { x: 0.610, y: 0.580, r: 0.080 },
-  root_tunnel:    { x: 0.465, y: 0.640, r: 0.075 },
-  fungi_nook:     { x: 0.548, y: 0.715, r: 0.070 },
-  cooking_grotto: { x: 0.245, y: 0.690, r: 0.085 },
-  stream_cave:    { x: 0.110, y: 0.710, r: 0.075 },
-  cave_mouth:     { x: 0.300, y: 0.785, r: 0.075 },
-  old_garden:     { x: 0.870, y: 0.635, r: 0.085 },
-  ravine:         { x: 0.720, y: 0.640, r: 0.065 },
+  elise_closet:   { x: 0.468, y: 0.095, r: 0.120 },
+  high_bough:     { x: 0.468, y: 0.250, r: 0.130 },
+  canopy_walk:    { x: 0.425, y: 0.355, r: 0.130 },
+  grotto:         { x: 0.565, y: 0.365, r: 0.125 },
+  behind_falls:   { x: 0.600, y: 0.385, r: 0.100 },
+  great_hollow:   { x: 0.270, y: 0.340, r: 0.120 },
+  mossy_chamber:  { x: 0.095, y: 0.230, r: 0.110 },
+  overlook:       { x: 0.175, y: 0.400, r: 0.120 },
+  songbird_nest:  { x: 0.800, y: 0.215, r: 0.120 },
+  lookout_perch:  { x: 0.725, y: 0.400, r: 0.120 },
+  bark_nook:      { x: 0.880, y: 0.385, r: 0.100 },
+  clearing:       { x: 0.360, y: 0.470, r: 0.110 },
+  road:           { x: 0.360, y: 0.440, r: 0.085 },
+  root_chamber:   { x: 0.465, y: 0.550, r: 0.120 },
+  bower:          { x: 0.720, y: 0.540, r: 0.120 },
+  mushroom_ring:  { x: 0.195, y: 0.585, r: 0.120 },
+  fox_warren:     { x: 0.610, y: 0.580, r: 0.115 },
+  root_tunnel:    { x: 0.465, y: 0.640, r: 0.105 },
+  fungi_nook:     { x: 0.548, y: 0.715, r: 0.100 },
+  cooking_grotto: { x: 0.245, y: 0.690, r: 0.120 },
+  stream_cave:    { x: 0.110, y: 0.710, r: 0.105 },
+  cave_mouth:     { x: 0.300, y: 0.785, r: 0.105 },
+  old_garden:     { x: 0.870, y: 0.635, r: 0.120 },
+  ravine:         { x: 0.720, y: 0.640, r: 0.095 },
 };
 
 const FROG_PATH = [
@@ -2121,7 +2121,7 @@ function parse(raw) {
   if (f('isNewt')) {
     const inp2 = raw.trim().toLowerCase();
     if (['restart','new game','start over','reset','begin again'].includes(inp2)) {
-      clearSave(); print(`<em>The forest fades...</em>`, 'sys'); setTimeout(() => location.reload(), 600);
+      G._restarting = true; clearSave(); print(`<em>The forest fades...</em>`, 'sys'); setTimeout(() => location.reload(), 600);
     } else {
       print(`You are a newt. Your options are limited. (Type <b>restart</b> to begin again.)`, 'sys');
     }
@@ -2724,11 +2724,15 @@ function redrawMap() {
   fctx.drawImage(img, 0, 0, W, H);
   fctx.filter = 'none';
 
-  // Punch radially-faded holes for each visited room
+  // Punch radially-faded holes for visited rooms + always-visible title
   fctx.globalCompositeOperation = 'destination-out';
   const visited = new Set(G.visitedRooms || []);
-  for (const [roomId, reg] of Object.entries(MAP_REGIONS)) {
-    if (!visited.has(roomId)) continue;
+  const toReveal = [
+    ...Object.entries(MAP_REGIONS).filter(([id]) => visited.has(id)),
+    // Map title is always visible
+    ['_title', { x: 0.47, y: 0.045, r: 0.22 }],
+  ];
+  for (const [, reg] of toReveal) {
     const cx = reg.x * W;
     const cy = reg.y * H;
     const r  = reg.r * Math.min(W, H);
@@ -2777,8 +2781,8 @@ document.getElementById('map-toggle').addEventListener('click', function() {
 document.getElementById('map-img').addEventListener('load', function() {
   const canvas = document.getElementById('map-canvas');
   const ratio  = this.naturalHeight / this.naturalWidth;
-  canvas.width  = 250;
-  canvas.height = Math.round(250 * ratio);
+  canvas.width  = 500;
+  canvas.height = Math.round(500 * ratio);
   redrawMap();
 });
 
