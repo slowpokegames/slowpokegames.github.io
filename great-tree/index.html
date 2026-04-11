@@ -2794,7 +2794,7 @@ function drawMapToCanvas(canvas) {
   mctx.putImageData(px, 0, 0);
 
   // 5. Punch mask through fog with a blur for soft edges
-  fctx.filter = 'blur(18px)';
+  fctx.filter = 'blur(7px)';
   fctx.globalCompositeOperation = 'destination-out';
   fctx.drawImage(mkc, 0, 0);
 
