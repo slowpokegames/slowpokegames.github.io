@@ -218,33 +218,6 @@ function clearSave() {
 
 // ── Map regions (normalized x,y center + radius, relative to image size) ──
 // Rooms not listed have no map representation (underground/fortress areas).
-// rx = fraction of image width, ry = fraction of image height
-const MAP_REGIONS = {
-  elise_closet:   { x: 0.468, y: 0.095, rx: 0.120, ry: 0.090 },
-  high_bough:     { x: 0.468, y: 0.250, rx: 0.135, ry: 0.100 },
-  canopy_walk:    { x: 0.468, y: 0.355, rx: 0.140, ry: 0.100 },  // x aligned under high_bough
-  grotto:         { x: 0.615, y: 0.405, rx: 0.130, ry: 0.102 },  // xpos+5%, ypos+4%, yrad+2%
-  behind_falls:   { x: 0.600, y: 0.385, rx: 0.100, ry: 0.080 },
-  great_hollow:   { x: 0.400, y: 0.340, rx: 0.130, ry: 0.124 },  // x shifted right by rx; ry+30%
-  mossy_chamber:  { x: 0.145, y: 0.150, rx: 0.127, ry: 0.104 },  // xpos+5%, xrad+10%, yrad+15%, ypos-8%
-  overlook:       { x: 0.135, y: 0.450, rx: 0.156, ry: 0.109 },  // x shifted left; xrad+25%, yrad+15%, ypos+5%
-  songbird_nest:  { x: 0.780, y: 0.215, rx: 0.128, ry: 0.095 },  // xpos-2%, xrad+2%
-  lookout_perch:  { x: 0.765, y: 0.420, rx: 0.125, ry: 0.095 },  // xpos+4%, ypos+2%
-  bark_nook:      { x: 0.950, y: 0.345, rx: 0.105, ry: 0.086 },  // xpos+7%, ypos-4%, yrad+8%
-  clearing:       { x: 0.360, y: 0.470, rx: 0.115, ry: 0.090 },
-  road:           { x: 0.360, y: 0.440, rx: 0.090, ry: 0.065 },
-  root_chamber:   { x: 0.475, y: 0.610, rx: 0.125, ry: 0.100 },  // xpos+1%, ypos+6%, yrad+5%
-  bower:          { x: 0.720, y: 0.540, rx: 0.125, ry: 0.095 },
-  mushroom_ring:  { x: 0.195, y: 0.585, rx: 0.125, ry: 0.095 },
-  fox_warren:     { x: 0.610, y: 0.580, rx: 0.120, ry: 0.090 },
-  root_tunnel:    { x: 0.465, y: 0.640, rx: 0.110, ry: 0.082 },
-  fungi_nook:     { x: 0.548, y: 0.715, rx: 0.105, ry: 0.080 },
-  cooking_grotto: { x: 0.245, y: 0.690, rx: 0.125, ry: 0.095 },
-  stream_cave:    { x: 0.110, y: 0.710, rx: 0.110, ry: 0.082 },
-  cave_mouth:     { x: 0.300, y: 0.785, rx: 0.110, ry: 0.082 },
-  old_garden:     { x: 0.870, y: 0.635, rx: 0.125, ry: 0.095 },
-  ravine:         { x: 0.720, y: 0.640, rx: 0.100, ry: 0.075 },
-};
 
 const FROG_PATH = [
   'lookout_perch', 'canopy_walk', 'mushroom_ring',
@@ -2735,60 +2708,97 @@ function print(html, cls) {
 }
 
 // ── Map reveal ─────────────────────────────────────────────────
-// Always-visible entries (title bar of the map image)
-const MAP_ALWAYS = [
-  { x: 0.47, y: 0.048, rx: 0.42, ry: 0.075 },
-];
+// Maps room ID → mask filename (in images/ folder).
+// _title is always included regardless of visited rooms.
+const ROOM_MASKS = {
+  _title:         'title_mask.png',
+  elise_closet:   'hollow_mask.png',
+  high_bough:     'high_bough_mask.png',
+  canopy_walk:    'canopy_walk_mask.png',
+  grotto:         'grotto_mask.png',
+  great_hollow:   'great_hollow_mask.png',
+  mossy_chamber:  'mossy_chamber_mask.png',
+  overlook:       'overlook_mask.png',
+  songbird_nest:  'songbird_nest_mask.png',
+  lookout_perch:  'lookout_perch_mask.png',
+  bark_nook:      'bark_nook_mask.png',
+  clearing:       'clearing_mask.png',
+  root_chamber:   'root_chamber_mask.png',
+  bower:          'bower_mask.png',
+  mushroom_ring:  'mushroom_ring_mask.png',
+  fox_warren:     'fox_warren_mask.png',
+  root_tunnel:    'root_mouth_mask.png',  // "root mouth" label on map
+  cave_mouth:     'cave_mouth_mask.png',
+  fungi_nook:     'fungi_nook_mask.png',
+  cooking_grotto: 'cooking_grotto_mask.png',
+  stream_cave:    'stream_cave_mask.png',
+  old_garden:     'old_garden_mask.png',
+};
+
+// Preloaded Image objects keyed by room ID
+const MASK_IMGS = {};
+
+function preloadMasks() {
+  Object.entries(ROOM_MASKS).forEach(([id, file]) => {
+    const img = new Image();
+    img.onload = () => { MASK_IMGS[id] = img; redrawMap(); };
+    img.src = `images/${file}`;
+  });
+}
 
 function drawMapToCanvas(canvas) {
-  const img = document.getElementById('map-img');
-  if (!canvas || !img || !img.naturalWidth || !canvas.width) return;
+  const mapImg = document.getElementById('map-img');
+  if (!canvas || !mapImg || !mapImg.naturalWidth || !canvas.width) return;
 
   const ctx = canvas.getContext('2d');
   const W = canvas.width, H = canvas.height;
 
-  // Base: clear image
+  // 1. Base: clear map image
   ctx.clearRect(0, 0, W, H);
-  ctx.drawImage(img, 0, 0, W, H);
+  ctx.drawImage(mapImg, 0, 0, W, H);
 
-  // Fog: blurred + darkened, with elliptical holes punched for visited rooms
+  // 2. Fog: blurred + darkened copy
   const fog = document.createElement('canvas');
   fog.width = W; fog.height = H;
   const fctx = fog.getContext('2d');
   fctx.filter = 'blur(10px) brightness(0.14)';
-  fctx.drawImage(img, 0, 0, W, H);
+  fctx.drawImage(mapImg, 0, 0, W, H);
   fctx.filter = 'none';
-  fctx.globalCompositeOperation = 'destination-out';
 
+  // 3. Combined reveal mask: union of title + visited room masks
+  const mkc = document.createElement('canvas');
+  mkc.width = W; mkc.height = H;
+  const mctx = mkc.getContext('2d');
+  mctx.fillStyle = 'black';
+  mctx.fillRect(0, 0, W, H);
+  mctx.globalCompositeOperation = 'lighter'; // additive: black stays black, white stays white
+
+  // Always show title
+  if (MASK_IMGS['_title']) mctx.drawImage(MASK_IMGS['_title'], 0, 0, W, H);
+
+  // Add each visited room's mask
   const visited = new Set(G.visitedRooms || []);
-  const revealList = [
-    ...MAP_ALWAYS,
-    ...Object.entries(MAP_REGIONS)
-        .filter(([id]) => visited.has(id))
-        .map(([, reg]) => reg),
-  ];
+  Object.keys(ROOM_MASKS).forEach(id => {
+    if (id === '_title') return;
+    if (!visited.has(id)) return;
+    if (MASK_IMGS[id]) mctx.drawImage(MASK_IMGS[id], 0, 0, W, H);
+  });
 
-  for (const reg of revealList) {
-    const cx   = reg.x  * W;
-    const cy   = reg.y  * H;
-    const pxRx = reg.rx * W;
-    const pxRy = reg.ry * H;
-    // Scale context so a circle of radius pxRx becomes the desired ellipse,
-    // and the radial gradient follows the same transform.
-    fctx.save();
-    fctx.translate(cx, cy);
-    fctx.scale(1, pxRy / pxRx);
-    const grad = fctx.createRadialGradient(0, 0, 0, 0, 0, pxRx);
-    grad.addColorStop(0,    'rgba(0,0,0,1)');
-    grad.addColorStop(0.60, 'rgba(0,0,0,1)');
-    grad.addColorStop(1,    'rgba(0,0,0,0)');
-    fctx.fillStyle = grad;
-    fctx.beginPath();
-    fctx.arc(0, 0, pxRx, 0, Math.PI * 2);
-    fctx.fill();
-    fctx.restore();
+  // 4. Convert mask luminance → alpha (white reveals, black keeps fog)
+  const px = mctx.getImageData(0, 0, W, H);
+  const d  = px.data;
+  for (let i = 0; i < d.length; i += 4) {
+    d[i+3] = d[i]; // alpha = red channel (grayscale)
+    d[i] = d[i+1] = d[i+2] = 0;
   }
+  mctx.putImageData(px, 0, 0);
 
+  // 5. Punch mask through fog with a blur for soft edges
+  fctx.filter = 'blur(18px)';
+  fctx.globalCompositeOperation = 'destination-out';
+  fctx.drawImage(mkc, 0, 0);
+
+  // 6. Composite fog over clear base
   ctx.drawImage(fog, 0, 0);
 }
 
@@ -2872,7 +2882,7 @@ document.getElementById('map-img').addEventListener('load', function() {
   const ratio  = this.naturalHeight / this.naturalWidth;
   canvas.width  = 500;
   canvas.height = Math.round(500 * ratio);
-  redrawMap();
+  preloadMasks(); // masks call redrawMap() as they load
 });
 
 // ── Start ──────────────────────────────────────────────────────
