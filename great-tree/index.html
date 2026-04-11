@@ -76,17 +76,65 @@ body {
 #output::-webkit-scrollbar { width: 5px; }
 #output::-webkit-scrollbar-track { background: #12110a; }
 #output::-webkit-scrollbar-thumb { background: #3a3820; border-radius: 3px; }
+
+/* ── Map panel ──────────────────────────────────────────────── */
+#title-bar { position: relative; }
+#map-toggle {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: transparent;
+  border: 1px solid #3a3820;
+  color: #8a7a50;
+  font-family: Georgia, serif;
+  font-size: 0.75em;
+  letter-spacing: 0.06em;
+  padding: 3px 10px;
+  cursor: pointer;
+  border-radius: 2px;
+}
+#map-toggle:hover { border-color: #6a5a30; color: #d4c9a8; }
+#game-col {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow: hidden;
+}
+#map-panel {
+  width: 0;
+  overflow: hidden;
+  transition: width 0.35s ease;
+  background: #0a0908;
+  border-right: 1px solid #2e2d1a;
+  flex-shrink: 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 12px;
+}
+#map-panel.open { width: 272px; }
+#map-canvas { display: block; }
 </style>
 </head>
 <body>
-<div id="title-bar">✦ &nbsp; THE GREAT TREE &nbsp; ✦ &nbsp; A Birthday Adventure</div>
-<div id="main">
-  <div id="output"></div>
+<div id="title-bar">
+  <button id="map-toggle">Reveal Map</button>
+  ✦ &nbsp; THE GREAT TREE &nbsp; ✦ &nbsp; A Birthday Adventure
 </div>
-<div id="input-wrap">
-  <span id="prompt-sym">❯</span>
-  <input id="cmd" type="text" autocomplete="off" autocorrect="off"
-         autocapitalize="off" spellcheck="false" placeholder="what do you do?" />
+<div id="main">
+  <div id="map-panel">
+    <canvas id="map-canvas"></canvas>
+    <img id="map-img" src="great-tree-map.png" style="display:none" alt="World map">
+  </div>
+  <div id="game-col">
+    <div id="output"></div>
+    <div id="input-wrap">
+      <span id="prompt-sym">❯</span>
+      <input id="cmd" type="text" autocomplete="off" autocorrect="off"
+             autocapitalize="off" spellcheck="false" placeholder="what do you do?" />
+    </div>
+  </div>
 </div>
 
 <script>
@@ -107,6 +155,7 @@ const G = {
   echoHeard: false,
   namePrompt: true,
   wizAggro: 0,       // 0=fine, 1=warned once, 2=warned twice, 3=newt
+  visitedRooms: [],
 };
 
 // ── Save / load ────────────────────────────────────────────────
@@ -132,6 +181,35 @@ function loadGame(name) {
 function clearSave() {
   localStorage.removeItem(saveKey());
 }
+
+// ── Map regions (normalized x,y center + radius, relative to image size) ──
+// Rooms not listed have no map representation (underground/fortress areas).
+const MAP_REGIONS = {
+  elise_closet:   { x: 0.468, y: 0.095, r: 0.085 },
+  high_bough:     { x: 0.468, y: 0.250, r: 0.095 },
+  canopy_walk:    { x: 0.425, y: 0.355, r: 0.095 },
+  grotto:         { x: 0.565, y: 0.365, r: 0.090 },
+  behind_falls:   { x: 0.600, y: 0.385, r: 0.070 },
+  great_hollow:   { x: 0.270, y: 0.340, r: 0.085 },
+  mossy_chamber:  { x: 0.095, y: 0.230, r: 0.080 },
+  overlook:       { x: 0.175, y: 0.400, r: 0.085 },
+  songbird_nest:  { x: 0.800, y: 0.215, r: 0.085 },
+  lookout_perch:  { x: 0.725, y: 0.400, r: 0.085 },
+  bark_nook:      { x: 0.880, y: 0.385, r: 0.070 },
+  clearing:       { x: 0.360, y: 0.470, r: 0.080 },
+  road:           { x: 0.360, y: 0.440, r: 0.060 },
+  root_chamber:   { x: 0.465, y: 0.550, r: 0.085 },
+  bower:          { x: 0.720, y: 0.540, r: 0.085 },
+  mushroom_ring:  { x: 0.195, y: 0.585, r: 0.085 },
+  fox_warren:     { x: 0.610, y: 0.580, r: 0.080 },
+  root_tunnel:    { x: 0.465, y: 0.640, r: 0.075 },
+  fungi_nook:     { x: 0.548, y: 0.715, r: 0.070 },
+  cooking_grotto: { x: 0.245, y: 0.690, r: 0.085 },
+  stream_cave:    { x: 0.110, y: 0.710, r: 0.075 },
+  cave_mouth:     { x: 0.300, y: 0.785, r: 0.075 },
+  old_garden:     { x: 0.870, y: 0.635, r: 0.085 },
+  ravine:         { x: 0.720, y: 0.640, r: 0.065 },
+};
 
 const FROG_PATH = [
   'lookout_perch', 'canopy_walk', 'mushroom_ring',
@@ -384,6 +462,7 @@ To the <b>north</b>, a grand arch of pale bark opens to a sunlit clearing. To th
     desc() { return ``; },
     exits: { south:'clearing' },
     onEnter() {
+      markVisited('road');
       print("The path leads out of the clearing and into the trees, winding away into distance. You can almost hear voices — friends, adventures not yet begun.");
       print("But the forest calls you back. <em>Today is not that day.</em>", 'sys');
       G.room = 'clearing';
@@ -2618,9 +2697,60 @@ function print(html, cls) {
   outputEl.scrollTop = outputEl.scrollHeight;
 }
 
+// ── Map reveal ─────────────────────────────────────────────────
+function markVisited(roomId) {
+  if (!G.visitedRooms) G.visitedRooms = [];
+  if (G.visitedRooms.includes(roomId)) return;
+  G.visitedRooms.push(roomId);
+  redrawMap();
+}
+
+function redrawMap() {
+  const canvas = document.getElementById('map-canvas');
+  const img    = document.getElementById('map-img');
+  if (!canvas || !img || !img.naturalWidth || !canvas.width) return;
+
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+
+  // Base layer: clear image
+  ctx.clearRect(0, 0, W, H);
+  ctx.drawImage(img, 0, 0, W, H);
+
+  // Fog layer: blurred + darkened image with soft holes for visited rooms
+  const fog = document.createElement('canvas');
+  fog.width = W; fog.height = H;
+  const fctx = fog.getContext('2d');
+
+  fctx.filter = 'blur(10px) brightness(0.14)';
+  fctx.drawImage(img, 0, 0, W, H);
+  fctx.filter = 'none';
+
+  // Punch radially-faded holes for each visited room
+  fctx.globalCompositeOperation = 'destination-out';
+  const visited = new Set(G.visitedRooms || []);
+  for (const [roomId, reg] of Object.entries(MAP_REGIONS)) {
+    if (!visited.has(roomId)) continue;
+    const cx = reg.x * W;
+    const cy = reg.y * H;
+    const r  = reg.r * Math.min(W, H);
+    const grad = fctx.createRadialGradient(cx, cy, 0, cx, cy, r);
+    grad.addColorStop(0,    'rgba(0,0,0,1)');
+    grad.addColorStop(0.60, 'rgba(0,0,0,1)');
+    grad.addColorStop(1,    'rgba(0,0,0,0)');
+    fctx.fillStyle = grad;
+    fctx.beginPath();
+    fctx.arc(cx, cy, r, 0, Math.PI * 2);
+    fctx.fill();
+  }
+
+  ctx.drawImage(fog, 0, 0);
+}
+
 function printRoom() {
   const room = ROOMS[G.room];
   if (!room) return;
+  markVisited(G.room);
   print(`<span class="room-title">${room.name}</span>`);
   print(``);
   const desc = room.desc ? room.desc() : '';
@@ -2636,6 +2766,22 @@ cmdEl.addEventListener('keydown', function(e) {
     this.value = '';
     if (val) { parse(val); if (!G._restarting) saveGame(); }
   }
+});
+
+// ── Map toggle ─────────────────────────────────────────────────
+document.getElementById('map-toggle').addEventListener('click', function() {
+  const panel = document.getElementById('map-panel');
+  const open = panel.classList.toggle('open');
+  this.textContent = open ? 'Hide Map' : 'Reveal Map';
+  if (open) redrawMap();
+});
+
+document.getElementById('map-img').addEventListener('load', function() {
+  const canvas = document.getElementById('map-canvas');
+  const ratio  = this.naturalHeight / this.naturalWidth;
+  canvas.width  = 250;
+  canvas.height = Math.round(250 * ratio);
+  redrawMap();
 });
 
 // ── Start ──────────────────────────────────────────────────────
