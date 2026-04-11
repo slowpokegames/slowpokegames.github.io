@@ -972,7 +972,15 @@ function cmdGo(dir) {
     const keys = Object.keys(room.exits || {});
     const match = keys.find(k => k.startsWith(dir) || dir.startsWith(k));
     if (match) { cmdGo(match); return; }
-    print("You can't go that way.", 'err'); return;
+    // list valid exits, skipping short aliases ('back','out','cross','bridge','cave')
+    const aliases = new Set(['back','out','cross','bridge','cave']);
+    const validDirs = keys.filter(k => !aliases.has(k));
+    if (validDirs.length > 0) {
+      print(`You can't go that way. From here you can go: <b>${validDirs.join('</b>, <b>')}</b>.`, 'err');
+    } else {
+      print(`You can't go that way.`, 'err');
+    }
+    return;
   }
   const dest = typeof exitVal === 'function' ? exitVal() : exitVal;
   if (!dest) return; // blocked — exit fn already printed message
@@ -1970,7 +1978,7 @@ function smartFallback(raw) {
   }
   if ((s.includes('fire') || s.includes('hearth')) && G.room === 'cooking_grotto') { cmdLook('fire'); return; }
 
-  print(`Hmm — not quite sure what you mean. Try <b>look</b> to see what's around you, or <b>help</b> for a list of things you can do.`, 'sys');
+  print(`Not sure what you mean. Try <b>look</b> to see what's around you, a direction like <b>north</b> to move, or type <b>help</b> for a full list of commands.`, 'sys');
 }
 
 // ── Main parser ─────────────────────────────────────────────────
@@ -2011,6 +2019,9 @@ function parse(raw) {
       setTimeout(() => {
         print(`You open your eyes.`);
         print(`The first thing you notice is the <em>wind</em>.`);
+        print(``);
+        print(`The world is wide and full of secrets. Explore it — look around, talk to everyone you meet, and see what you find. There is something waiting for you at the very top of the tallest tower. It has your name on it.`, 'sys');
+        print(`<span class="sys"><em>(Not sure what to do? Type <b>help</b> at any time.)</em></span>`);
         print(``);
         setTimeout(() => { G.room = 'high_bough'; printRoom(); }, 400);
       }, 300);
