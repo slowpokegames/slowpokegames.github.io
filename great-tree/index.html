@@ -238,7 +238,7 @@ To the <b>south</b>, back to the bough.`;
       const frog = frogRoom()==='canopy_walk';
       return `A broad branch — wide as a road — stretches between the great trunks of several enormous trees. Hanging bridges of twisted vine sway in every direction.
 
-To the <b>north</b>, the high bough where you woke. To the <b>west</b>, the oldest trunk, its bark dark and knotted. To the <b>northeast</b>, blue feathers wind around an entrance. To the <b>southeast</b>, bark carved with strange symbols. To the <b>south</b>, the sound of rushing water. To the <b>down</b>, the root-staircase winds toward the forest floor.${frog ? `\n\nA large green frog sits on a vine nearby, motionless, watching you with enormous golden eyes.` : ''}`;
+To the <b>north</b>, the high bough where you woke. To the <b>west</b>, the oldest trunk, its bark dark and knotted. To the <b>northeast</b>, blue feathers wind around an entrance. To the <b>southeast</b>, bark carved with strange symbols. To the <b>south</b>, the sound of rushing water. To the <b>down</b>, the root-staircase winds toward the forest floor.${frog ? `\n\nA green frog — absurdly large, fifty pounds if he's an ounce — sits on a vine nearby, motionless, watching you with enormous golden eyes.` : ''}`;
     },
     exits: {
       north:'high_bough', west:'great_hollow',
@@ -260,7 +260,7 @@ ${talked
 
 The waterfall roars. Behind its curtain, the darkness seems to go back further than it should. You could try going <b>behind</b> the falls.
 
-To the <b>north</b>, the canopy walk.${finalFrog && !f('frogKissed') ? `\n\nA large green frog floats on a lily pad at the edge of the pool, watching you with golden eyes. He doesn't leap this time. He simply waits.` : ''}`;
+To the <b>north</b>, the canopy walk.${finalFrog && !f('frogKissed') ? `\n\nA green frog — very large, very still, and very focused on you — floats on a lily pad at the edge of the pool. The lily pad dips noticeably under his weight. He doesn't leap this time. He simply waits.` : ''}`;
     },
     exits: {
       north:'canopy_walk',
@@ -342,7 +342,7 @@ To the <b>southwest</b>, the canopy walk.`;
       const frogHere = frogRoom()==='lookout_perch';
       return `A branch that juts boldly outward, open to the sky on three sides. The view to the south is remarkable — straight down to a walled garden, and rising from its center, the broken towers of an ancient fortress. Something glints at the very top.
 
-A carved wooden <span class="em">telescope</span> leans against the trunk.${frogHere ? `\n\nA large green frog sits perfectly still at the very tip of the branch, staring south with enormous golden eyes. He seems completely unbothered by the height.` : ''}
+A carved wooden <span class="em">telescope</span> leans against the trunk.${frogHere ? `\n\nA green frog, improbably large — you would guess fifty pounds — sits perfectly still at the very tip of the branch, staring south with enormous golden eyes. The branch bends slightly under him. He seems completely unbothered by the height.` : ''}
 
 To the <b>northwest</b>, the canopy walk.`;
     },
@@ -398,7 +398,7 @@ To the <b>north</b>, a grand arch of pale bark opens to a sunlit clearing. To th
       const frogHere = frogRoom()==='bower';
       return `Past a curtain of hanging ivy, the roots have grown into shelves and curved seats padded with fine moss. Pressed flowers cover every wall. Beautiful things sit on the shelves: a crystal acorn, a golden leaf, a glass bottle with a tiny ship inside it, and a small <span class="em">ceramic bunny</span>, glazed white, sitting very upright with its paws folded.
 
-It is heavier than it looks.${!f('flowerTaken') ? `\n\nA cluster of small <span class="em">blue flowers</span> grows from a crack in the root-wall, fragrant and bright.` : ''}${frogHere ? `\n\nA large green frog crouches half-hidden under a golden leaf on the lowest shelf, very still.` : ''}
+It is heavier than it looks.${!f('flowerTaken') ? `\n\nA cluster of small <span class="em">blue flowers</span> grows from a crack in the root-wall, fragrant and bright.` : ''}${frogHere ? `\n\nA green frog crouches half-hidden under a golden leaf on the lowest shelf — he is far too large for this to actually be hiding, but he seems committed to the idea.` : ''}
 
 To the <b>west</b>, the root chamber.`;
     },
@@ -409,7 +409,7 @@ To the <b>west</b>, the root chamber.`;
     name: "The Mushroom Ring",
     desc() {
       const frogHere = frogRoom()==='mushroom_ring';
-      return `A perfect circle of enormous mushrooms, each glowing a different color — amber, violet, sea-green, rose. In the center, a flat stone serves as a table, set with acorn-cap bowls and leaf-plates as though a feast just ended.${frogHere ? `\n\nA large green frog sits on the amber mushroom, perfectly still, staring at nothing in particular.` : ''}
+      return `A perfect circle of enormous mushrooms, each glowing a different color — amber, violet, sea-green, rose. In the center, a flat stone serves as a table, set with acorn-cap bowls and leaf-plates as though a feast just ended.${frogHere ? `\n\nA green frog, heavy and wide and somehow very dignified, sits on the amber mushroom, perfectly still, staring at nothing in particular.` : ''}
 
 To the <b>east</b>, the root chamber. To the <b>south</b>, between the two tallest mushrooms, the warm smell of cooking drifts up.`;
     },
@@ -458,7 +458,7 @@ To the <b>north</b>, the root tunnel.`;
       const fire = f('hearthLit');
       return `A cave of smooth stone and living roots. ${fire ? `A warm fire burns in a hollow log, sending sparks spiraling up through a hole in the ceiling.` : `A hollow log sits cold in the center — a fireplace waiting for flame.`} Clay pots and bunches of dried herbs hang from root-hooks. It smells of woodsmoke and blackberries and something harder to name.
 
-The Woman of the Tree stands at the stone hearth, stirring a pot with a long wooden spoon. She is beautiful in the way that old trees are beautiful — warm and steady, with kind eyes that catch the firelight. When she looks up at you, the whole room feels a little more like home.${frogHere ? `\n\nA large green frog sits on the hearthstone, watching the ${fire ? 'fire' : 'cold log'} with great interest.` : ''}${!MSPOT.cooking_grotto ? `\n\nUnder a clay pot on a low shelf: a <span class="em">mushroom</span>, golden-yellow and plump.` : ''}
+The Woman of the Tree stands at the stone hearth, stirring a pot with a long wooden spoon. She is beautiful in the way that old trees are beautiful — warm and steady, with kind eyes that catch the firelight. When she looks up at you, the whole room feels a little more like home.${frogHere ? `\n\nA green frog — enormously large, fifty pounds if he's an ounce — sits on the hearthstone, watching the ${fire ? 'fire' : 'cold log'} with unblinking golden eyes.` : ''}${!MSPOT.cooking_grotto ? `\n\nUnder a clay pot on a low shelf: a <span class="em">mushroom</span>, golden-yellow and plump.` : ''}
 
 To the <b>north</b>, the mushroom ring. To the <b>east</b>, the root tunnel. To the <b>west</b>, something rushes and gurgles. A passage <b>out</b> rises toward daylight.`;
     },
@@ -997,7 +997,7 @@ const NPC_DESC = {
   mermaid: `She has dark hair and bright, knowing eyes. Her tail catches the blue-green light of the pool. She looks like someone who has kept many secrets cheerfully.`,
   wizard:  `An old man with a long silver braid and robes the color of a sunset after rain. Crystals and bark-scrolls surround him like a small universe of his own making. He smells of pine and something sweeter.`,
   unicorn: `Pure white, with a horn like twisted morning frost. Her eyes are a deep, patient blue. She is smaller than you expected and more real.`,
-  frog:    `A large green frog with enormous golden eyes. Very still. Watching you with an expression that is either wisdom or hunger — it is difficult to say. On the top of his head, a pattern in his markings catches the light: three small points, arranged like a crown.`,
+  frog:    `A green frog, far larger than any frog has a right to be — perhaps fifty pounds of him, wide and deliberate, with the solid presence of something that has been sitting in exactly this spot for a very long time. His golden eyes are enormous. On the top of his head, tilted at a slight angle, sits a tiny golden crown.`,
   sunny:   () => f('sunnyCalmed')
     ? `A yellow dog with a tightly curled tail, currently curled contentedly beside the bridge. She is approximately the size of a small sofa and clearly very pleased with herself.`
     : `A yellow dog with a tightly curled tail and amber eyes. She sits at the foot of the bridge with the calm certainty of something that has never, in its life, been moved against its will.`,
@@ -1649,7 +1649,7 @@ function cmdKiss(target) {
   print(`He bows. He winks. He says: <span class="dialog">"I owe you one."</span>`);
   print(`Then he leaps back into the pool with a tremendous <em>SPLASH</em>, and is gone.`);
   print(`Something bobs to the surface: a tiny, perfect golden crown. You reach in and take it.`);
-  print(`<span class="sys">(You now carry: a tiny golden crown. It is about the size of a thimble — meant for a fingertip, or perhaps the head of a very small and very royal frog.)</span>`);
+  print(`<span class="sys">(You now carry: a tiny golden crown. It is about the size of a thimble — small enough for a fingertip, which makes you wonder how it ever fit on that enormous frog. Clearly worn often, judging by the faint scratches on its underside.)</span>`);
 }
 
 function cmdSay(words) {
