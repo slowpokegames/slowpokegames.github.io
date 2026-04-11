@@ -54,13 +54,8 @@ body {
 #input-wrap {
   display: flex;
   align-items: center;
-  padding: 9px 28px;
-  border-top: 1px solid #2e2d1a;
-  background: #0d0c07;
-  max-width: 820px;
-  width: 100%;
-  margin: 0 auto;
-  flex-shrink: 0;
+  padding: 9px 0;
+  margin-top: 4px;
 }
 #prompt-sym { color: #6a8858; margin-right: 9px; user-select: none; }
 #cmd {
@@ -128,11 +123,12 @@ body {
     <img id="map-img" src="great-tree-map.png" style="display:none" alt="World map">
   </div>
   <div id="game-col">
-    <div id="output"></div>
-    <div id="input-wrap">
-      <span id="prompt-sym">❯</span>
-      <input id="cmd" type="text" autocomplete="off" autocorrect="off"
-             autocapitalize="off" spellcheck="false" placeholder="what do you do?" />
+    <div id="output">
+      <div id="input-wrap">
+        <span id="prompt-sym">❯</span>
+        <input id="cmd" type="text" autocomplete="off" autocorrect="off"
+               autocapitalize="off" spellcheck="false" placeholder="enter your name" />
+      </div>
     </div>
   </div>
 </div>
@@ -2148,6 +2144,7 @@ function parse(raw) {
     if (!name) { print(`(Please enter your name to begin.)`, 'sys'); return; }
     G.playerName = name.charAt(0).toUpperCase() + name.slice(1);
     G.namePrompt = false;
+    document.getElementById('cmd').placeholder = 'what do you do?  (try "help")';
     if (loadGame(G.playerName)) {
       print(`<br>Welcome back, <span class="em">${G.playerName}</span>. Your adventure continues.<br>`, 'sys');
       setTimeout(() => printRoom(), 300);
@@ -2687,13 +2684,14 @@ function parse(raw) {
 }
 
 // ── Output ─────────────────────────────────────────────────────
-const outputEl = document.getElementById('output');
+const outputEl  = document.getElementById('output');
+const inputWrap = document.getElementById('input-wrap');
 
 function print(html, cls) {
   const p = document.createElement('p');
   if (cls) p.className = cls;
   p.innerHTML = (html === '' || html === undefined) ? '&nbsp;' : html;
-  outputEl.appendChild(p);
+  outputEl.insertBefore(p, inputWrap);
   outputEl.scrollTop = outputEl.scrollHeight;
 }
 
