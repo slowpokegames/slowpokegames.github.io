@@ -109,7 +109,38 @@ body {
   padding-top: 12px;
 }
 #map-panel.open { width: 524px; }
-#map-canvas { display: block; }
+#map-canvas { display: block; cursor: pointer; }
+/* ── Map modal ──────────────────────────────────────────────── */
+#map-modal {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.88);
+  z-index: 200;
+  align-items: center;
+  justify-content: center;
+}
+#map-modal.open { display: flex; }
+#map-modal-box { position: relative; line-height: 0; }
+#map-modal-close {
+  position: absolute;
+  top: -34px;
+  right: 0;
+  background: transparent;
+  border: 1px solid #5a5030;
+  color: #c8b870;
+  font-family: Georgia, serif;
+  font-size: 0.85em;
+  padding: 4px 12px;
+  cursor: pointer;
+  border-radius: 2px;
+  letter-spacing: 0.06em;
+}
+#map-modal-close:hover { border-color: #a09050; color: #f0e090; }
+#map-modal-canvas { display: block; max-width: 90vw; max-height: 88vh; }
+@media (max-width: 767px) {
+  #map-panel, #map-panel.open { width: 0 !important; overflow: hidden; }
+}
 </style>
 </head>
 <body>
@@ -130,6 +161,13 @@ body {
                autocapitalize="off" spellcheck="false" placeholder="enter your name" />
       </div>
     </div>
+  </div>
+</div>
+
+<div id="map-modal">
+  <div id="map-modal-box">
+    <button id="map-modal-close">✕ close</button>
+    <canvas id="map-modal-canvas"></canvas>
   </div>
 </div>
 
@@ -180,31 +218,32 @@ function clearSave() {
 
 // ── Map regions (normalized x,y center + radius, relative to image size) ──
 // Rooms not listed have no map representation (underground/fortress areas).
+// rx = fraction of image width, ry = fraction of image height
 const MAP_REGIONS = {
-  elise_closet:   { x: 0.468, y: 0.095, r: 0.120 },
-  high_bough:     { x: 0.468, y: 0.250, r: 0.130 },
-  canopy_walk:    { x: 0.425, y: 0.355, r: 0.130 },
-  grotto:         { x: 0.565, y: 0.365, r: 0.125 },
-  behind_falls:   { x: 0.600, y: 0.385, r: 0.100 },
-  great_hollow:   { x: 0.270, y: 0.340, r: 0.120 },
-  mossy_chamber:  { x: 0.095, y: 0.230, r: 0.110 },
-  overlook:       { x: 0.175, y: 0.400, r: 0.120 },
-  songbird_nest:  { x: 0.800, y: 0.215, r: 0.120 },
-  lookout_perch:  { x: 0.725, y: 0.400, r: 0.120 },
-  bark_nook:      { x: 0.880, y: 0.385, r: 0.100 },
-  clearing:       { x: 0.360, y: 0.470, r: 0.110 },
-  road:           { x: 0.360, y: 0.440, r: 0.085 },
-  root_chamber:   { x: 0.465, y: 0.550, r: 0.120 },
-  bower:          { x: 0.720, y: 0.540, r: 0.120 },
-  mushroom_ring:  { x: 0.195, y: 0.585, r: 0.120 },
-  fox_warren:     { x: 0.610, y: 0.580, r: 0.115 },
-  root_tunnel:    { x: 0.465, y: 0.640, r: 0.105 },
-  fungi_nook:     { x: 0.548, y: 0.715, r: 0.100 },
-  cooking_grotto: { x: 0.245, y: 0.690, r: 0.120 },
-  stream_cave:    { x: 0.110, y: 0.710, r: 0.105 },
-  cave_mouth:     { x: 0.300, y: 0.785, r: 0.105 },
-  old_garden:     { x: 0.870, y: 0.635, r: 0.120 },
-  ravine:         { x: 0.720, y: 0.640, r: 0.095 },
+  elise_closet:   { x: 0.468, y: 0.095, rx: 0.120, ry: 0.090 },
+  high_bough:     { x: 0.468, y: 0.250, rx: 0.135, ry: 0.100 },
+  canopy_walk:    { x: 0.425, y: 0.355, rx: 0.140, ry: 0.100 },
+  grotto:         { x: 0.565, y: 0.365, rx: 0.130, ry: 0.100 },
+  behind_falls:   { x: 0.600, y: 0.385, rx: 0.100, ry: 0.080 },
+  great_hollow:   { x: 0.270, y: 0.340, rx: 0.130, ry: 0.095 },
+  mossy_chamber:  { x: 0.095, y: 0.230, rx: 0.115, ry: 0.090 },
+  overlook:       { x: 0.175, y: 0.400, rx: 0.125, ry: 0.095 },
+  songbird_nest:  { x: 0.800, y: 0.215, rx: 0.125, ry: 0.095 },
+  lookout_perch:  { x: 0.725, y: 0.400, rx: 0.125, ry: 0.095 },
+  bark_nook:      { x: 0.880, y: 0.385, rx: 0.105, ry: 0.080 },
+  clearing:       { x: 0.360, y: 0.470, rx: 0.115, ry: 0.090 },
+  road:           { x: 0.360, y: 0.440, rx: 0.090, ry: 0.065 },
+  root_chamber:   { x: 0.465, y: 0.550, rx: 0.125, ry: 0.095 },
+  bower:          { x: 0.720, y: 0.540, rx: 0.125, ry: 0.095 },
+  mushroom_ring:  { x: 0.195, y: 0.585, rx: 0.125, ry: 0.095 },
+  fox_warren:     { x: 0.610, y: 0.580, rx: 0.120, ry: 0.090 },
+  root_tunnel:    { x: 0.465, y: 0.640, rx: 0.110, ry: 0.082 },
+  fungi_nook:     { x: 0.548, y: 0.715, rx: 0.105, ry: 0.080 },
+  cooking_grotto: { x: 0.245, y: 0.690, rx: 0.125, ry: 0.095 },
+  stream_cave:    { x: 0.110, y: 0.710, rx: 0.110, ry: 0.082 },
+  cave_mouth:     { x: 0.300, y: 0.785, rx: 0.110, ry: 0.082 },
+  old_garden:     { x: 0.870, y: 0.635, rx: 0.125, ry: 0.095 },
+  ravine:         { x: 0.720, y: 0.640, rx: 0.100, ry: 0.075 },
 };
 
 const FROG_PATH = [
@@ -2696,57 +2735,93 @@ function print(html, cls) {
 }
 
 // ── Map reveal ─────────────────────────────────────────────────
-function markVisited(roomId) {
-  if (!G.visitedRooms) G.visitedRooms = [];
-  if (G.visitedRooms.includes(roomId)) return;
-  G.visitedRooms.push(roomId);
-  redrawMap();
-}
+// Always-visible entries (title bar of the map image)
+const MAP_ALWAYS = [
+  { x: 0.47, y: 0.048, rx: 0.42, ry: 0.075 },
+];
 
-function redrawMap() {
-  const canvas = document.getElementById('map-canvas');
-  const img    = document.getElementById('map-img');
+function drawMapToCanvas(canvas) {
+  const img = document.getElementById('map-img');
   if (!canvas || !img || !img.naturalWidth || !canvas.width) return;
 
   const ctx = canvas.getContext('2d');
   const W = canvas.width, H = canvas.height;
 
-  // Base layer: clear image
+  // Base: clear image
   ctx.clearRect(0, 0, W, H);
   ctx.drawImage(img, 0, 0, W, H);
 
-  // Fog layer: blurred + darkened image with soft holes for visited rooms
+  // Fog: blurred + darkened, with elliptical holes punched for visited rooms
   const fog = document.createElement('canvas');
   fog.width = W; fog.height = H;
   const fctx = fog.getContext('2d');
-
   fctx.filter = 'blur(10px) brightness(0.14)';
   fctx.drawImage(img, 0, 0, W, H);
   fctx.filter = 'none';
-
-  // Punch radially-faded holes for visited rooms + always-visible title
   fctx.globalCompositeOperation = 'destination-out';
+
   const visited = new Set(G.visitedRooms || []);
-  const toReveal = [
-    ...Object.entries(MAP_REGIONS).filter(([id]) => visited.has(id)),
-    // Map title is always visible
-    ['_title', { x: 0.47, y: 0.045, r: 0.22 }],
+  const revealList = [
+    ...MAP_ALWAYS,
+    ...Object.entries(MAP_REGIONS)
+        .filter(([id]) => visited.has(id))
+        .map(([, reg]) => reg),
   ];
-  for (const [, reg] of toReveal) {
-    const cx = reg.x * W;
-    const cy = reg.y * H;
-    const r  = reg.r * Math.min(W, H);
-    const grad = fctx.createRadialGradient(cx, cy, 0, cx, cy, r);
+
+  for (const reg of revealList) {
+    const cx   = reg.x  * W;
+    const cy   = reg.y  * H;
+    const pxRx = reg.rx * W;
+    const pxRy = reg.ry * H;
+    // Scale context so a circle of radius pxRx becomes the desired ellipse,
+    // and the radial gradient follows the same transform.
+    fctx.save();
+    fctx.translate(cx, cy);
+    fctx.scale(1, pxRy / pxRx);
+    const grad = fctx.createRadialGradient(0, 0, 0, 0, 0, pxRx);
     grad.addColorStop(0,    'rgba(0,0,0,1)');
     grad.addColorStop(0.60, 'rgba(0,0,0,1)');
     grad.addColorStop(1,    'rgba(0,0,0,0)');
     fctx.fillStyle = grad;
     fctx.beginPath();
-    fctx.arc(cx, cy, r, 0, Math.PI * 2);
+    fctx.arc(0, 0, pxRx, 0, Math.PI * 2);
     fctx.fill();
+    fctx.restore();
   }
 
   ctx.drawImage(fog, 0, 0);
+}
+
+function redrawMap() {
+  drawMapToCanvas(document.getElementById('map-canvas'));
+}
+
+function openMapModal() {
+  const img = document.getElementById('map-img');
+  if (!img.naturalWidth) return;
+  const canvas = document.getElementById('map-modal-canvas');
+  const maxW = Math.round(window.innerWidth  * 0.90);
+  const maxH = Math.round(window.innerHeight * 0.88);
+  const ratio = img.naturalHeight / img.naturalWidth;
+  let w = maxW, h = Math.round(maxW * ratio);
+  if (h > maxH) { h = maxH; w = Math.round(h / ratio); }
+  canvas.width = w; canvas.height = h;
+  drawMapToCanvas(canvas);
+  document.getElementById('map-modal').classList.add('open');
+}
+
+function closeMapModal() {
+  document.getElementById('map-modal').classList.remove('open');
+}
+
+function markVisited(roomId) {
+  if (!G.visitedRooms) G.visitedRooms = [];
+  if (G.visitedRooms.includes(roomId)) return;
+  G.visitedRooms.push(roomId);
+  redrawMap();
+  if (document.getElementById('map-modal').classList.contains('open')) {
+    drawMapToCanvas(document.getElementById('map-modal-canvas'));
+  }
 }
 
 function printRoom() {
@@ -2770,12 +2845,26 @@ cmdEl.addEventListener('keydown', function(e) {
   }
 });
 
-// ── Map toggle ─────────────────────────────────────────────────
+// ── Map toggle & modal ─────────────────────────────────────────
 document.getElementById('map-toggle').addEventListener('click', function() {
-  const panel = document.getElementById('map-panel');
-  const open = panel.classList.toggle('open');
-  this.textContent = open ? 'Hide Map' : 'Reveal Map';
-  if (open) redrawMap();
+  if (window.innerWidth < 768) {
+    openMapModal();
+  } else {
+    const panel = document.getElementById('map-panel');
+    const open = panel.classList.toggle('open');
+    this.textContent = open ? 'Hide Map' : 'Reveal Map';
+    if (open) redrawMap();
+  }
+});
+
+document.getElementById('map-canvas').addEventListener('click', openMapModal);
+
+document.getElementById('map-modal').addEventListener('click', function(e) {
+  if (e.target === this) closeMapModal();
+});
+document.getElementById('map-modal-close').addEventListener('click', closeMapModal);
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') closeMapModal();
 });
 
 document.getElementById('map-img').addEventListener('load', function() {
