@@ -222,18 +222,18 @@ function clearSave() {
 const MAP_REGIONS = {
   elise_closet:   { x: 0.468, y: 0.095, rx: 0.120, ry: 0.090 },
   high_bough:     { x: 0.468, y: 0.250, rx: 0.135, ry: 0.100 },
-  canopy_walk:    { x: 0.425, y: 0.355, rx: 0.140, ry: 0.100 },
-  grotto:         { x: 0.565, y: 0.365, rx: 0.130, ry: 0.100 },
+  canopy_walk:    { x: 0.468, y: 0.355, rx: 0.140, ry: 0.100 },  // x aligned under high_bough
+  grotto:         { x: 0.615, y: 0.405, rx: 0.130, ry: 0.102 },  // xpos+5%, ypos+4%, yrad+2%
   behind_falls:   { x: 0.600, y: 0.385, rx: 0.100, ry: 0.080 },
-  great_hollow:   { x: 0.270, y: 0.340, rx: 0.130, ry: 0.095 },
-  mossy_chamber:  { x: 0.095, y: 0.230, rx: 0.115, ry: 0.090 },
-  overlook:       { x: 0.175, y: 0.400, rx: 0.125, ry: 0.095 },
-  songbird_nest:  { x: 0.800, y: 0.215, rx: 0.125, ry: 0.095 },
-  lookout_perch:  { x: 0.725, y: 0.400, rx: 0.125, ry: 0.095 },
-  bark_nook:      { x: 0.880, y: 0.385, rx: 0.105, ry: 0.080 },
+  great_hollow:   { x: 0.400, y: 0.340, rx: 0.130, ry: 0.124 },  // x shifted right by rx; ry+30%
+  mossy_chamber:  { x: 0.145, y: 0.150, rx: 0.127, ry: 0.104 },  // xpos+5%, xrad+10%, yrad+15%, ypos-8%
+  overlook:       { x: 0.135, y: 0.450, rx: 0.156, ry: 0.109 },  // x shifted left; xrad+25%, yrad+15%, ypos+5%
+  songbird_nest:  { x: 0.780, y: 0.215, rx: 0.128, ry: 0.095 },  // xpos-2%, xrad+2%
+  lookout_perch:  { x: 0.765, y: 0.420, rx: 0.125, ry: 0.095 },  // xpos+4%, ypos+2%
+  bark_nook:      { x: 0.950, y: 0.345, rx: 0.105, ry: 0.086 },  // xpos+7%, ypos-4%, yrad+8%
   clearing:       { x: 0.360, y: 0.470, rx: 0.115, ry: 0.090 },
   road:           { x: 0.360, y: 0.440, rx: 0.090, ry: 0.065 },
-  root_chamber:   { x: 0.465, y: 0.550, rx: 0.125, ry: 0.095 },
+  root_chamber:   { x: 0.475, y: 0.610, rx: 0.125, ry: 0.100 },  // xpos+1%, ypos+6%, yrad+5%
   bower:          { x: 0.720, y: 0.540, rx: 0.125, ry: 0.095 },
   mushroom_ring:  { x: 0.195, y: 0.585, rx: 0.125, ry: 0.095 },
   fox_warren:     { x: 0.610, y: 0.580, rx: 0.120, ry: 0.090 },
@@ -1085,7 +1085,7 @@ function cmdGo(dir) {
   if (exitVal === undefined) {
     // try partial match
     const keys = Object.keys(room.exits || {});
-    const match = keys.find(k => k.startsWith(dir) || dir.startsWith(k));
+    const match = keys.find(k => k.startsWith(dir));
     if (match) { cmdGo(match); return; }
     // list valid exits, skipping short aliases ('back','out','cross','bridge','cave')
     const aliases = new Set(['back','out','cross','bridge','cave']);
