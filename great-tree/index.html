@@ -163,6 +163,7 @@ const HINTS = [
   "The fox's door is old, and old doors remember old keys. A key that smells of cold water may be exactly what you need.",
   "The beast at the bridge is not cruel — she is hungry. The Woman of the Tree can help, if her fire is lit and she has what she needs.",
   "The words on the banner are not decoration. Say them clearly, in the places that wait for them. Stone can listen.",
+  "There is a frog who has been waiting a very long time for someone patient enough to follow him. Find him wherever he sits, speak to him, and do not stop until he stops running. He will not leap forever.",
 ];
 
 // ── Dictionary ─────────────────────────────────────────────────
@@ -467,7 +468,7 @@ To the <b>north</b>, the mushroom ring. To the <b>east</b>, the root tunnel. To 
   stream_cave: {
     name: "The Stream Cave",
     desc() {
-      return `An underground stream cuts through this cave fast and cold, churning white over smooth stones. The mist is chilly. Stepping stones cross the water — they wobble.
+      return `An underground stream cuts through this cave fast and cold, churning white over smooth stones. The mist is chilly. Stepping stones cross the water, but the far bank is just more cave wall — no passage there.
 
 To the <b>east</b>, the cooking grotto.`;
     },
@@ -478,7 +479,7 @@ To the <b>east</b>, the cooking grotto.`;
     name: "The Cave Mouth",
     desc() {
       const torchGone = has('torch') || has('torch_lit') || f('torchTaken');
-      return `A broad, low cave. Two great archways open to the <b>north</b> letting in pale daylight and the smell of pine. Animal tracks cross the dusty floor.${!torchGone ? `\n\nLeaning against the wall near the left arch, wrapped in a protective leaf: a <span class="em">torch</span>, unlit, smelling of pine resin.` : ''}
+      return `A broad, low cave. A great archway opens to the <b>north</b>, letting in pale daylight and the smell of pine. Animal tracks cross the dusty floor.${!torchGone ? `\n\nLeaning against the wall beside the arch, wrapped in a protective leaf: a <span class="em">torch</span>, unlit, smelling of pine resin.` : ''}
 
 To the <b>south</b>, the cooking grotto.`;
     },
@@ -874,7 +875,7 @@ function talkTo(name) {
   }
 
   // Woman of the Tree
-  if (['woman','cook','her','lady','mom','mother','tree'].some(k => n.includes(k))) {
+  if (['woman','cook','her','lady','mom','mother'].some(k => n.includes(k)) || n === 'tree' || n === 'woman of the tree' || n === 'tree woman') {
     if (G.room !== 'cooking_grotto') { print("She's not here.", 'err'); return; }
     if (f('crownWorn') && has('tiny_crown')) {
       print(`She turns from the pot, catches sight of the crown on your finger, and puts both hands on her hips.`);
@@ -996,7 +997,7 @@ const NPC_DESC = {
   mermaid: `She has dark hair and bright, knowing eyes. Her tail catches the blue-green light of the pool. She looks like someone who has kept many secrets cheerfully.`,
   wizard:  `An old man with a long silver braid and robes the color of a sunset after rain. Crystals and bark-scrolls surround him like a small universe of his own making. He smells of pine and something sweeter.`,
   unicorn: `Pure white, with a horn like twisted morning frost. Her eyes are a deep, patient blue. She is smaller than you expected and more real.`,
-  frog:    `A large green frog with enormous golden eyes. Very still. Watching you with an expression that is either wisdom or hunger — it is difficult to say.`,
+  frog:    `A large green frog with enormous golden eyes. Very still. Watching you with an expression that is either wisdom or hunger — it is difficult to say. On the top of his head, a pattern in his markings catches the light: three small points, arranged like a crown.`,
   sunny:   () => f('sunnyCalmed')
     ? `A yellow dog with a tightly curled tail, currently curled contentedly beside the bridge. She is approximately the size of a small sofa and clearly very pleased with herself.`
     : `A yellow dog with a tightly curled tail and amber eyes. She sits at the foot of the bridge with the calm certainty of something that has never, in its life, been moved against its will.`,
@@ -1229,6 +1230,11 @@ function cmdLook(target) {
     return;
   }
 
+  // Present at tower top
+  if (['present','gift','box','package','label','tag'].some(k => t.includes(k)) && G.room === 'tower_top') {
+    print(`It is wrapped carefully, with your name written on the label in careful letters. It is the right size to hold anything.`); return;
+  }
+
   // Generic fall-through — friendly, not an error
   print(`You look carefully, but the ${t} doesn't reveal anything more.`, 'sys');
 }
@@ -1303,6 +1309,9 @@ function cmdTake(target) {
   if (['blue flower','flower','flowers','bloom','blossom'].some(k => t.includes(k))) {
     if (has('blue_flower')) { print(`You already have the blue flowers.`, 'sys'); return; }
     if (G.room === 'overlook') { aggravateWizard(); return; }
+    if (G.room === 'high_bough') {
+      print(`The flowers are wound all through the vines overhead, well out of reach. They're beautiful up there — leave them be.`, 'sys'); return;
+    }
     if (G.room === 'songbird_nest') {
       print(`The flower at her hooves is pressed flat and dry — it has belonged to her a long time. Taking it would feel wrong.`);
       print(`But you could bring her a fresh one. Blue flowers grow in the bower, just east of the great root chamber.`, 'sys');
@@ -1382,6 +1391,13 @@ function cmdOpen(target) {
     return;
   }
 
+  if (['present','gift','box','package'].some(k => t.includes(k))) {
+    if (G.room !== 'tower_top') { print(`There's no present here.`, 'err'); return; }
+    print(`You untie the ribbon and fold back the paper very carefully.`);
+    print(`Inside is exactly what you were hoping for.`);
+    print(`It is perfect.`); return;
+  }
+
   print(`You can't open that.`, 'err');
 }
 
@@ -1406,8 +1422,35 @@ function cmdRead(target) {
     return;
   }
 
-  if (['banner','sign','inscription'].some(k => t.includes(k))) {
+  if (['banner','sign'].some(k => t.includes(k))) {
     cmdLook('banner'); return;
+  }
+
+  if (['inscription','carving','letters','writing','carved'].some(k => t.includes(k))) {
+    if (['fortress_ground','fortress_l1','fortress_l2','fortress_l3','tower_top'].includes(G.room)) {
+      cmdLook('banner'); return;
+    }
+    if (G.room === 'overlook') { cmdLook('scroll'); return; }
+    print(`Nothing here to read by that name.`, 'err'); return;
+  }
+
+  if (['scroll','scrolls','bark scroll','bark'].some(k => t.includes(k)) && G.room === 'overlook') {
+    print(`The bark-scrolls are covered in writing so small and cramped you can barely make out individual letters. It seems to be in at least three different languages. Some of it might be a recipe.`); return;
+  }
+
+  if (['riddle','wall','chamber'].some(k => t.includes(k)) && G.room === 'riddle_junction') {
+    print(`Carved into the wall:`);
+    print(`<span class="em"><em>"I have no original thoughts, yet I repeat everything I hear.<br>
+I am born of a shout and die in a whisper.<br>
+I cannot be seen, but I can be found between the mountains.<br>
+I always have the last word, yet I never speak first."</em></span>`);
+    print(`Below it, in smaller letters: <em>"An old friend lives in the last chamber. She will show you the way if you call out to her."</em>`);
+    return;
+  }
+
+  if (['present','label','tag','name'].some(k => t.includes(k)) && G.room === 'tower_top') {
+    print(`Written on the label, in careful letters: <span class="em">${G.playerName || 'your name'}</span>.`);
+    print(`It was always meant for you.`); return;
   }
 
   print(`Nothing here to read by that name.`, 'err');
@@ -1816,6 +1859,9 @@ function sn(str) {
 
 // Context-aware smell
 function cmdSmell(t) {
+  if (['present','gift','box','package'].some(k => t.includes(k)) && G.room === 'tower_top') {
+    print(`Paper, and ribbon, and something beneath that — warm and familiar. Like home.`); return;
+  }
   if (t.includes('flower') || t.includes('bloom')) { print(`The blue flowers smell of honey and something you can't quite name.`); return; }
   if (t.includes('mushroom') || t.includes('fungus')) { print(`Earthy, strange, and faintly sweet.`); return; }
   if (t.includes('honey')) { print(`Rich and golden and impossible to resist.`); return; }
@@ -1889,6 +1935,18 @@ function cmdListen(target) {
     }
     if (['mermaid','her','woman'].some(k => t.includes(k)) && G.room === 'grotto') {
       print(`You lean toward the pool and listen beneath the roar of the waterfall. There — very faint, from somewhere below the surface — humming. A tune without a name, low and old and unhurried.`); return;
+    }
+    if (['chime','chimes','wind chime','wind chimes'].some(k => t.includes(k)) && G.room === 'songbird_nest') {
+      print(`You hold very still and listen to the blue-dyed wind chimes. They ring in a soft, unhurried sequence — no two notes the same, no pattern you can follow. Like rain, except intentional.`); return;
+    }
+    if (['frog','toad'].some(k => t.includes(k)) && frogRoom() === G.room) {
+      print(`The frog is absolutely silent. Somehow this is loud.`); return;
+    }
+    if (['waterfall','falls','water'].some(k => t.includes(k)) && G.room === 'grotto') {
+      print(`You lean toward the falls and listen. The roar fills your whole chest. Inside it, just barely — the same humming you've heard before, rising from somewhere under the surface.`); return;
+    }
+    if (['stream','water','rill'].some(k => t.includes(k)) && ['stream_cave','stream_junction','narrow_rill'].includes(G.room)) {
+      print(`The stream chatters over the stones — quick, cold, purposeful. It sounds like it knows exactly where it's going.`); return;
     }
   }
   // fortress_l1: listening describes the waiting silence; the magic word requires "say listen"
@@ -2054,9 +2112,31 @@ function parse(raw) {
   // MOVEMENT
   if (['go','move','walk','run','travel','head','proceed','advance',
        'enter','exit','leave','climb','descend','crawl','step',
-       'continue','follow','pass','cross'].includes(verb)) {
+       'continue','follow','chase','pursue','track','pass','cross'].includes(verb)) {
+    // Follow/chase frog — special handling
+    if (['follow','chase','pursue','track'].includes(verb) &&
+        rest && ['frog','toad','him'].some(k => rest.includes(k))) {
+      const fl = frogRoom();
+      if (!fl) { print(`The frog is gone. Only ripples remain.`, 'sys'); return; }
+      if (fl === G.room) { print(`The frog is right here with you.`, 'sys'); return; }
+      const roomName = ROOMS[fl] ? ROOMS[fl].name : fl;
+      print(`You saw him leap that way, but tracking a frog through the forest is easier said than done.`, 'sys');
+      print(`<span class="sys"><em>(Hint: explore until you find him, then <b>talk to</b> him.)</em></span>`);
+      return;
+    }
     if (!rest) {
       print(`Which direction? Try <b>north</b>, <b>south</b>, <b>east</b>, <b>west</b>, <b>up</b>, <b>down</b>…`, 'sys'); return;
+    }
+    // "climb up" / "climb down" → treat as directional
+    if (verb === 'climb') {
+      const climbDir = resolveDir(rest);
+      if (climbDir) { cmdGo(climbDir); return; }
+      // "climb tree" in old_garden
+      if (['tree','oak','hollow'].some(k => rest.includes(k)) && G.room === 'old_garden') {
+        print(`You try to scale the old oak. The bark is smooth and the first branch is far overhead. You slip back down, scratching your palms on the moss.`);
+        print(`The hollow is at ground level — you can reach into it without climbing.`); return;
+      }
+      print(`There's nothing particular to climb here.`, 'sys'); return;
     }
     // strip leading prepositions before resolving
     const cleaned = rest.replace(/^(the|to|into|through|over|across|behind|past|up|down)\s+/,'').trim();
@@ -2066,6 +2146,9 @@ function parse(raw) {
     print(`Not sure which way "${rest}" is. Try a direction like <b>north</b>, <b>south</b>, <b>up</b>, <b>behind</b>…`, 'sys');
     return;
   }
+
+  // CLIMB alone (no direction) handled below — but "climb X" is caught above
+
 
   // APPROACH — if NPC nearby, talk; else move
   if (['approach','interact','greet'].includes(verb)) {
@@ -2322,7 +2405,54 @@ function parse(raw) {
       }
       return;
     }
+    // Bower decorative items — acorn, leaf, bottle
+    if (G.room === 'bower' && ['acorn','crystal acorn'].some(k => t.includes(k))) {
+      print(`Cool and smooth, lighter than glass has any right to be. Light bends through it onto your palm in tiny rainbows.`); return;
+    }
+    if (G.room === 'bower' && ['leaf','golden leaf','gold leaf'].some(k => t.includes(k))) {
+      print(`Cold and impossibly thin. When you tap it, it rings — not clatters, rings — a clear bright note that lingers longer than it should.`); return;
+    }
+    if (G.room === 'bower' && ['bottle','ship','tiny ship'].some(k => t.includes(k))) {
+      print(`The glass is cool and perfectly smooth, without a seam anywhere. You turn it over in your hands. The tiny ship inside shifts slightly — its sails moving as if catching a small wind you cannot feel.`); return;
+    }
+    // Wind chimes in songbird_nest
+    if (G.room === 'songbird_nest' && ['chime','chimes','wind chime','wind chimes','blue chime','wood'].some(k => t.includes(k))) {
+      print(`You brush the wind chimes with your fingers. They ring in a soft falling sequence — blue and clear and a little sad, like a song remembered from a long time ago.`); return;
+    }
+    // Present at tower top
+    if (['present','gift','box','package'].some(k => t.includes(k)) && G.room === 'tower_top') {
+      print(`It is warm, somehow, in your hands. Solid. Real.`);
+      print(`You hold it for a moment. The wind is in your hair. The whole world is below you.`); return;
+    }
     print(`You don't find anything like that here to touch.`, 'sys'); return;
+  }
+
+  // SWIM / DIVE / FISH
+  if (['swim','dive','jump in','wade','paddle','dip'].includes(verb) ||
+      (verb === 'jump' && ['in','into','pool','water'].some(k => rest.includes(k)))) {
+    const waterRooms = ['grotto','behind_falls','mossy_chamber','stream_cave','stream_junction','narrow_rill'];
+    if (waterRooms.includes(G.room)) {
+      if (G.room === 'grotto') {
+        print(`You consider it. The pool is deep and very cold, and the mermaid is somewhere below.`);
+        print(`You decide to leave the swimming to the professionals.`, 'sys');
+      } else if (G.room === 'mossy_chamber') {
+        print(`The pool looks still and deep. You lean toward it — and your reflection leans toward you — and you both think better of it.`);
+      } else {
+        print(`The current is fast and the water is bitterly cold. You value your limbs. You stay on the bank.`, 'sys');
+      }
+    } else {
+      print(`There's no water here to swim in.`, 'sys');
+    }
+    return;
+  }
+  if (['fish','catch fish','go fishing'].includes(verb) ||
+      (verb === 'catch' && rest.includes('fish'))) {
+    if (G.room === 'grotto') {
+      print(`The tiny silver fish dart away before you get close. They are very fast and very small and clearly not interested.`);
+    } else {
+      print(`There are no fish here to catch.`, 'sys');
+    }
+    return;
   }
 
   // WAIT / REST / SIT
@@ -2397,10 +2527,10 @@ function parse(raw) {
     return;
   }
 
-  // WEAR / PUT ON
-  if (['wear','equip','don','put'].includes(verb) ||
-      (verb === 'put' && rest.match(/^on\b/))) {
-    const t = sn(rest.replace(/^on\b\s*/,'')).toLowerCase();
+  // WEAR / PUT ON  (accepts "put on crown", "put crown on", "wear crown")
+  if (['wear','equip','don'].includes(verb) ||
+      (verb === 'put' && (rest.match(/^on\b/) || rest.match(/\bon$/i)))) {
+    const t = sn(rest.replace(/^on\b\s*/,'').replace(/\s+on$/i,'')).toLowerCase();
     if (!t || ['crown','tiny crown','golden crown','gold crown'].some(k => t.includes(k))) {
       if (!has('tiny_crown')) { print(`You don't have a crown to wear.`, 'sys'); return; }
       if (f('crownWorn')) { print(`You're already wearing it — on your finger, where it fits best.`, 'sys'); return; }
@@ -2430,15 +2560,6 @@ function parse(raw) {
   // DROP / THROW
   if (['drop','leave','discard','throw','toss','put down'].includes(verb)) {
     print(`Better keep hold of everything you've found.`, 'sys'); return;
-  }
-
-  // CLIMB alone (no direction) — context
-  if (verb === 'climb' && !rest) {
-    if (ROOMS[G.room] && ROOMS[G.room].exits) {
-      if (ROOMS[G.room].exits.up) { cmdGo('up'); return; }
-      if (ROOMS[G.room].exits.down) { cmdGo('down'); return; }
-    }
-    print(`There's nothing particular to climb here.`, 'sys'); return;
   }
 
   // AGAIN
